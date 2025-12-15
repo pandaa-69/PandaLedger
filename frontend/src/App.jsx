@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import AddExpenseForm from './components/AddExpenseForm'
+
 
 function App() {
   // 1. The "Memory" (useState)
@@ -21,22 +25,29 @@ function App() {
   }, [])
 
   return (
-    // 3. The "Menu" (JSX - looks like HTML)
-    <div style={{ padding: "20px" }}>
-      <h1>🐼 PandaLedger Live</h1>
-      
-      {/* 4. The Loop (map) */}
-      {/* For every expense in our memory, show a card */}
-      {expenses.map(expense => (
-        <div key={expense.id} style={{ border: "1px solid #444", margin: "10px", padding: "10px", borderRadius: "8px" }}>
-          <h3>{expense.description}</h3>
-          <p>💰 ₹{expense.amount}</p>
-          <small>📅 {expense.date} | 🏷️ {expense.category}</small>
-        </div>
-      ))}
-      
-      {expenses.length === 0 && <p>Loading expenses...</p>}
+    <div>
+      <Navbar />
+      {/* // 3. The "Menu" (JSX - looks like HTML) */}
+      <div style={{ padding: "20px" }}>
+        <h1>🐼 PandaLedger Live</h1>
+        <AddExpenseForm />
+        <hr style={{ margin: "30px 0", borderColor: "#444" }}/>
+        
+        {/* 4. The Loop (map) */}
+        {/* For every expense in our memory, show a card */}
+        {expenses.map(expense => (
+          <div key={expense.id} style={{ border: "1px solid #444", margin: "10px", padding: "10px", borderRadius: "8px" }}>
+            <h3>{expense.description}</h3>
+            <p>💰 ₹{expense.amount}</p>
+            <small>📅 {expense.date} | 🏷️ {expense.category}</small>
+          </div>
+        ))}
+        
+        {expenses.length === 0 && <p>Loading expenses...</p>}
+      </div>
+      <Footer/>
     </div>
+
   )
 }
 
