@@ -66,7 +66,22 @@ MIDDLEWARE = [
 ]
 # Allow any website to talk to your API (For dev only). 
 # Later, change this to specific domain: ["https://pandaledger.vercel.app"]
-CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # Only trust our React App
+    "http://127.0.0.1:5173",    
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 ROOT_URLCONF = 'PandaLedger.urls'
 

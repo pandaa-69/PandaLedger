@@ -15,18 +15,24 @@ function AddExpenseForm() {
             description: description,
             amount: amount,
             category: category,
-            date: new Date().toISOString().split('T')[0] // Today's date (YYYY-MM-DD)
+            date: new Date().toISOString() // Today's date (YYYY-MM-DD)
         };
 
         // 3. The POST Request (Sending the order to Django)
-        fetch('http://127.0.0.1:8000/ledger/api/expenses/add/', {
+        fetch('http://127.0.0.1:8000/api/expenses/add/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(expenseData) // Convert JS Object to JSON Text
+            body: JSON.stringify(expenseData),
+            credentials:'include' // Convert JS Object to JSON Text
         })
-        .then(response => response.json())
+        .then(response => {
+            if(!response.ok){
+                throw new Error("Server rejected request");
+            }
+            return response.json();
+        })
         .then(data => {
             console.log("Success:", data);
             alert("Expense Added! (Refresh the page to see it)");
@@ -34,6 +40,9 @@ function AddExpenseForm() {
             setDescription('');
             setAmount('');
             setCategory('');
+
+            // reloading automatically so the new item 
+            window.location.reload();
         })
         .catch((error) => {
             console.error('Error:', error);
