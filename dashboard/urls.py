@@ -2,6 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.dashboard_view, name="panda-ledger-dashboard"),
+    path('dashboard/', views.market_dashboard_api, name="panda-ledger-dashboard"),
     
 ]

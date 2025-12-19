@@ -24,4 +24,5 @@ urlpatterns = [
     path('',include('dashboard.urls')),
     path('api/', include('ledger.urls')),
     path('api/', include('core.urls')),
+    path('api/', include('dashboard.urls')),
 ]
