@@ -1,73 +1,110 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react"; // Added Eye icons
 
 function Signup() {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const navigate = useNavigate();
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // New State
+  const navigate = useNavigate();
 
-    const handleSignup = (e) => {
-        e.preventDefault();
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-        // connects to the backend URL we tested yesterday
-        fetch('http://127.0.0.1:8000/api/auth/signup/', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Signup failed");
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Signup Success", data);
-            alert("Account created! 🐼 Please Log In.");
-            navigate('/login'); // Redirect to login after success
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("Signup Failed! Username might be taken.");
-        });
-    };
+    fetch("http://127.0.0.1:8000/api/auth/signup/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Signup failed");
+        return res.json();
+      })
+      .then(() => {
+        alert("Account created! Please log in.");
+        navigate("/login");
+      })
+      .catch((err) => {
+        alert("Username likely taken. Try another.");
+        setLoading(false);
+      });
+  };
 
-    return (
-        <div style={styles.container}>
-            <div style={styles.card}>
-                <h1 style={{ marginBottom: "20px" }}>📝 Join PandaLedger</h1>
-                <form onSubmit={handleSignup} style={styles.form}>
-                    <input 
-                        type="text" 
-                        placeholder="Choose Username" 
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        style={styles.input}
-                    />
-                    <input 
-                        type="password" 
-                        placeholder="Choose Password" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        style={styles.input}
-                    />
-                    <button type="submit" style={styles.button}>Create Account</button>
-                </form>
-                
-                <p style={{ marginTop: "15px", color: "#888" }}>
-                    Already have an account? <Link to="/login" style={{ color: "#a78bfa" }}>Log in</Link>
-                </p>
-            </div>
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-400">
+            <UserPlus size={24} />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Create Account</h2>
+          <p className="text-sm text-gray-400">Join PandaLedger today.</p>
         </div>
-    );
-}
 
-const styles = {
-    container: { display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" },
-    card: { backgroundColor: "#222", padding: "40px", borderRadius: "15px", boxShadow: "0 4px 15px rgba(0,0,0,0.5)", textAlign: "center", border: "1px solid #333", width: "300px" },
-    form: { display: "flex", flexDirection: "column", gap: "15px" },
-    input: { padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#333", color: "white", fontSize: "1rem", outline: "none" },
-    button: { padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#a78bfa", color: "#1a1a1a", fontWeight: "bold", fontSize: "1rem", cursor: "pointer" }
-};
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Choose Username
+            </label>
+            <input
+              type="text"
+              placeholder="Pick a unique name"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Choose Password
+            </label>
+            <div className="relative">
+                <input
+                type={showPassword ? "text" : "password"} // Dynamic Type
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
+                onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                }
+                />
+                {/* 👁️ THE EYE TOGGLE BUTTON */}
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-6 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 py-3 font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-cyan-500/20"
+          >
+            {loading ? <Loader2 className="mx-auto animate-spin" /> : "Sign Up"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="font-bold text-cyan-400 hover:underline hover:text-cyan-300"
+          >
+            Log in
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default Signup;

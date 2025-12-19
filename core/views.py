@@ -45,3 +45,14 @@ def login_api(request):
             return JsonResponse ({'error':'Invalid credentials'}, status = 400)
     return JsonResponse({'error': 'GET method not allowed. Please use POST.'}, status=405)
         
+@csrf_exempt
+def logout_api(request):
+    if request.method =='POST':
+        logout(request) #this kills the session/cookie for the current user
+        return JsonResponse({
+            'message':'Logged out successfully',
+        })
+    return JsonResponse({
+        'error':'Method not allowed'},
+        status = 405
+    )

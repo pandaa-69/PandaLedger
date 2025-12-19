@@ -1,112 +1,114 @@
-import React, { useState } from 'react';
-import { data, useNavigate, Link } from 'react-router-dom';
-
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Loader2, LogIn, Eye, EyeOff } from "lucide-react"; // Added Eye icons
 
 function Login() {
-    const [username, setUsername]=useState('');
-    const [password, setPassword]=useState('');
-    const navigate = useNavigate(); // this will allw us to change pages via code 
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // New State
+  const navigate = useNavigate();
 
-const handleLogin = (e) => {
-        e.preventDefault();
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-        // sending the credential to Django Backend
-        fetch('http://127.0.0.1:8000/api/auth/login/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-            credentials: 'include' // <--- 1. ADD THIS (Critical!)
-        })
-        .then(response => {
-            if (!response.ok) {
-                // If password is wrong (status 400/401), throw error to go to .catch
-                throw new Error("Login failed");
-            }
-            return response.json(); // <--- 2. ADD THIS (Convert to JSON)
-        })
-        .then(data => {
-            console.log("Login Success", data);
-            
-            // Now data.username actually exists!
-            localStorage.setItem('user', JSON.stringify(data.username));
+    fetch("http://127.0.0.1:8000/api/auth/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Login failed");
+        return res.json();
+      })
+      .then((data) => {
+        localStorage.setItem("user", JSON.stringify(data.username));
+        // Force reload to update Navbar immediately
+        window.location.href = "/"; 
+      })
+      .catch((err) => {
+        alert("Invalid Credentials!");
+        setLoading(false);
+      });
+  };
 
-            alert("Welcome back, " + data.username + "! 🐼");
-            
-            navigate('/');
-            window.location.reload();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("Login Failed! Check username/password");
-        });
-    };
-return (
-        <div style={styles.container}>
-            <div style={styles.card}>
-                <h1 style={{ marginBottom: "20px" }}>🔐 Login</h1>
-                <form onSubmit={handleLogin} style={styles.form}>
-                    <input 
-                        type="text" 
-                        placeholder="Username" 
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        style={styles.input}
-                    />
-                    <input 
-                        type="password" 
-                        placeholder="Password" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        style={styles.input}
-                    />
-                    <button type="submit" style={styles.button}>Enter the Matrix</button>
-                </form>
-                <p style={{ marginTop: "15px", color: "#888" }}>
-                    New here? <Link to="/signup" style={{ color: "#a78bfa" }}>Create Account</Link>
-                </p>
-            </div>
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-400">
+            <LogIn size={24} />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+          <p className="text-sm text-gray-400">
+            Enter credentials to access your wealth.
+          </p>
         </div>
-    );
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Username
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. panda_master"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Password
+            </label>
+            <div className="relative">
+                <input
+                type={showPassword ? "text" : "password"} // Dynamic Type
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
+                onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                }
+                />
+                {/* 👁️ THE EYE TOGGLE BUTTON */}
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-6 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 py-3 font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-cyan-500/20"
+          >
+            {loading ? <Loader2 className="mx-auto animate-spin" /> : "Sign In"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Don't have an account?{" "}
+          <Link
+            to="/signup"
+            className="font-bold text-cyan-400 hover:underline hover:text-cyan-300"
+          >
+            Create one
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-
-const styles = {
-    container: {
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "80vh", // Center vertically
-    },
-    card: {
-        backgroundColor: "#222",
-        padding: "40px",
-        borderRadius: "15px",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
-        textAlign: "center",
-        border: "1px solid #333",
-        width: "300px"
-    },
-    form: { display: "flex", flexDirection: "column", gap: "15px" },
-    input: {
-        padding: "12px",
-        borderRadius: "8px",
-        border: "none",
-        backgroundColor: "#333",
-        color: "white",
-        fontSize: "1rem",
-        outline: "none"
-    },
-    button: {
-        padding: "12px",
-        borderRadius: "8px",
-        border: "none",
-        backgroundColor: "#a78bfa",
-        color: "#1a1a1a",
-        fontWeight: "bold",
-        fontSize: "1rem",
-        cursor: "pointer",
-        transition: "transform 0.1s"
-    }
-};
 
 export default Login;

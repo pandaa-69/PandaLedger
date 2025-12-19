@@ -1,5 +1,19 @@
-venv/
+# --- DEPENDENCIES (Too big, don't track) ---
 node_modules/
-db.sqlite3
-.env
+venv/
+.venv/
+
+# --- PYTHON (Junk files) ---
 __pycache__/
+*.pyc
+
+# --- ENVIRONMENT & SECRETS (Never track!) ---
+.env
+db.sqlite3
+
+# --- BUILD OUTPUT (Generated files, don't track) ---
+dist/
+build/
+
+# --- OS JUNK ---
+.DS_Store

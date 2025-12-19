@@ -13,6 +13,7 @@ def get_market_dashboard_data():
         },
         "commodities":{
             "gold":"GC=F",
+            "silver":"SI=F"
         },
         "crypto":{
             "bitcoin":"BTC-USD",
@@ -29,6 +30,12 @@ def get_market_dashboard_data():
     }
 
     try:
+        # pre fetching the usd rate so we can use it for gold calulation
+        usd_ticker = yf.Ticker("INR=X")
+        # we want just the lastest current price so i think we should use fast_info rather than history()
+
+        usd_price = usd_ticker.fast_info.last_price 
+        
         # Fetching the prices and graphs
         for category, items in tickers_config.items():
             for name, symbol in items.items():
@@ -40,6 +47,22 @@ def get_market_dashboard_data():
 
                     if not history.empty:
                         current_price = history['Close'].iloc[-1]
+
+                        # Gold rate conversion form usd / ounce tp rupees / 10g
+
+                        if name=="gold":
+                            # to remmeber the formula i am righting it here (Price_usd * USD_rate/31.1035)*10
+                            current_price = (current_price*usd_price/31.1035)*10
+                            # we need to change the rate for the graph to for showing it correctly
+
+                            history['Close'] = (history["Close"]*usd_price/31.1035)*10
+                        elif name == "silver":
+                            # Silver: Convert USD/oz -> INR/1kg (Standard Indian Rate)
+                            conversion_factor = 1000 
+                            # Formula: (Price_USD * USD_Rate / 31.1035) * 1000
+                            current_price = (current_price * usd_price / 31.1035) * conversion_factor
+                            history['Close'] = (history["Close"] * usd_price / 31.1035) * conversion_factor
+                        # calculating the change percentage 
                         # if only 1 day of the data exists
                         if len(history)>1:
                             prev_close = history['Close'].iloc[-2]
@@ -87,7 +110,7 @@ def get_market_dashboard_data():
             content = item.get('content', {})
 
             # getting the image
-            image_url = "https://via.placeholder.com/150" # Fallback image
+            image_url = None # i will handle it in frontend
             thumbnail = content.get('thumbnail', {})
             if not thumbnail:
                 # fallback just in case if we dont found an img thant check the outer
