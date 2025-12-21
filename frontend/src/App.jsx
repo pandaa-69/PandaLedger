@@ -24,6 +24,9 @@ function App() {
 
   // Keep your existing fetch logic!
   useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/auth/csrf/", { credentials: "include" })
+        .catch(err => console.log("CSRF Fetch Error:", err));
+    
     fetch("http://127.0.0.1:8000/api/expenses/", {
       method: "GET",
       credentials: "include",

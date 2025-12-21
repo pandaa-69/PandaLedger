@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Search, Check, Loader, Calendar, Info } from "lucide-react"; // Import Info icon
+import { getCookie } from "../utils/csrf";
 
 const AddTransactionModal = ({ onClose, onSuccess, prefillAsset = null }) => {
   const [query, setQuery] = useState("");
@@ -53,7 +54,10 @@ const AddTransactionModal = ({ onClose, onSuccess, prefillAsset = null }) => {
     try {
       const res = await fetch("http://127.0.0.1:8000/api/portfolio/transaction/add/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
         credentials: "include",
         body: JSON.stringify(payload),
       });

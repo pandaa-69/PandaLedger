@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Edit2, Check, X } from 'lucide-react';
+import { getCookie } from '../../utils/csrf';
 
 const BudgetCard = ({ onBudgetChange }) => {
     const [stats, setStats] = useState({ total_spent: 0, monthly_budget: 0, percentage: 0 });
@@ -23,7 +24,10 @@ const BudgetCard = ({ onBudgetChange }) => {
         // 👇 FIXED URL: Removed "ledger/"
         fetch("http://127.0.0.1:8000/api/budget/update/", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken')
+            },
             credentials: "include",
             body: JSON.stringify({ budget: newBudget })
         }).then(res => {

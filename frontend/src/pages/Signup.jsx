@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react"; // Added Eye icons
+import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react";
+import { getCookie } from '../utils/csrf';
 
 function Signup() {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -14,8 +15,12 @@ function Signup() {
 
     fetch("http://127.0.0.1:8000/api/auth/signup/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
       body: JSON.stringify(formData),
+      credentials:"include"
     })
       .then((res) => {
         if (!res.ok) throw new Error("Signup failed");

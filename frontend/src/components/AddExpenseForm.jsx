@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Plus, Loader2 } from "lucide-react"; // I need to run 'npm install lucide-react' if this breaks!
+import { Plus, Loader2 } from "lucide-react";
+import { getCookie } from "../utils/csrf";
 
 function AddExpenseForm() {
   // 1. MY STATE: This is where I keep track of what I'm typing right now.
@@ -33,7 +34,10 @@ function AddExpenseForm() {
     // Sending the data to my Django API...
     fetch("http://127.0.0.1:8000/api/expenses/add/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
       body: JSON.stringify(payload), // Convert my JS object to JSON text
       credentials: "include", // CRITICAL: Send my session cookie so Django knows who I am
     })

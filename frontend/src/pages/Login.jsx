@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
+import { getCookie } from '../utils/csrf';
 
 function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -14,7 +15,10 @@ function Login() {
 
     fetch("http://127.0.0.1:8000/api/auth/login/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
       body: JSON.stringify(formData),
       credentials: "include",
     })

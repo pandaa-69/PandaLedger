@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, ArrowLeft, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCookie } from '../utils/csrf';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
@@ -15,8 +16,12 @@ const ForgotPassword = () => {
         try {
             const res = await fetch('http://127.0.0.1:8000/api/auth/reset-password/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                body: JSON.stringify({ email }),
+                credentials:'include'
             });
             const data = await res.json();
             

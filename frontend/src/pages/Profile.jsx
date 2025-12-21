@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { getCookie } from '../utils/csrf';
 const Profile = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState({ username: '', email: '' });
@@ -37,6 +37,10 @@ const Profile = () => {
 
         const res = await fetch('http://127.0.0.1:8000/api/user/profile/', {
             method: 'PUT',
+            headers: { 
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken')
+            },
             credentials:'include',
             body: JSON.stringify(payload)
         });

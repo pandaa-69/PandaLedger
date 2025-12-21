@@ -148,7 +148,7 @@ def get_portfolio(request):
     })
 
 # 3. ADD TRANSACTION
-@csrf_exempt
+
 @login_required
 def add_transaction(request):
     if request.method == 'POST':
@@ -180,7 +180,7 @@ def add_transaction(request):
     return JsonResponse({'error': 'POST method required'}, status=405)
 
 # 4. DELETE TRANSACTION (Updated with Backfill)
-@csrf_exempt
+
 @login_required
 def delete_transaction(request, transaction_id):
     if request.method == 'DELETE':

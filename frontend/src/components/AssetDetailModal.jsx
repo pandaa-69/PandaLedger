@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X, Calendar, Trash2, Plus } from "lucide-react"; 
+import { getCookie } from "../utils/csrf";
 
 const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => { 
   const [details, setDetails] = useState(null);
@@ -42,6 +43,10 @@ const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => {
     try {
         const res = await fetch(`http://127.0.0.1:8000/api/portfolio/transaction/delete/${txId}/`, {
             method: "DELETE",
+            headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
             credentials: "include",
         });
 

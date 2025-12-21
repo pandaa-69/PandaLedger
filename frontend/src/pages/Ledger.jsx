@@ -2,14 +2,19 @@ import React from "react";
 import AddExpenseForm from "../components/AddExpenseForm";
 import BudgetCard from "../components/ledger/BudgetCard"; // 👈 Import the new component
 import { Trash2, Wallet, ArrowDownCircle } from "lucide-react";
+import { getCookie } from '../utils/csrf';
 
 function Ledger({ expenses, onTransactionUpdate }) { 
   
   // Simple delete logic
   const handleDelete = (id) => {
     if (!confirm("Delete transaction?")) return;
-    fetch(`http://127.0.0.1:8000/api/expenses/delete/${id}/`, { // Note: using original endpoint
+    fetch(`http://127.0.0.1:8000/api/expenses/delete/${id}/`, {
       method: "DELETE",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
       credentials: "include",
     }).then((res) => {
       if (res.ok) {

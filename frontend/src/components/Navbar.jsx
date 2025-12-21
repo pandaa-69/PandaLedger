@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Wallet, PieChart, LogOut, User } from "lucide-react"; // 👈 Added User icon
+import { getCookie } from "../utils/csrf";
 
 function Navbar() {
   const [user, setUser] = useState(null);
@@ -14,6 +15,10 @@ function Navbar() {
   const handleLogout = () => {
     fetch("http://127.0.0.1:8000/api/auth/logout/", {
       method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie('csrftoken')
+      },
       credentials: "include",
     }).then(() => {
       localStorage.removeItem("user");

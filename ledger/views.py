@@ -28,7 +28,7 @@ def get_expenses(request):
 
     return JsonResponse({'results': data})
 
-@csrf_exempt
+
 def add_expense(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -53,7 +53,7 @@ def add_expense(request):
             "id": new_expense.id
         })
     
-@csrf_exempt
+
 def delete_expense(request, id):
     if request.method=='DELETE':    
         if not request.user.is_authenticated:
@@ -91,8 +91,7 @@ def get_ledger_stats(request):
         "percentage": min(int((total_spent / budget) * 100), 100) if budget > 0 else 0
     })
 
-# 2. Update Budget (Edit Limit) ✏️
-@csrf_exempt
+
 @login_required
 def update_budget(request):
     if request.method == 'POST':
