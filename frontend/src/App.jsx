@@ -12,8 +12,9 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Ledger from "./pages/Ledger";
-import Portfolio from "./pages/Portfolio"; // <--- IMPORT THIS ✅
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
+import Profile from './pages/Profile';
 
 function App() {
   const [expenses, setExpenses] = useState(null);
@@ -56,10 +57,15 @@ function App() {
               element={expenses ? <Ledger expenses={expenses} /> : <Navigate to="/login" />}
             />
 
-            {/* 👇 THE NEW PORTFOLIO ROUTE */}
             <Route
               path="/portfolio"
               element={expenses ? <Portfolio /> : <Navigate to="/login" />}
+            />
+
+            {/* 👇 PROTECTED PROFILE ROUTE */}
+            <Route 
+              path="/profile" 
+              element={expenses ? <Profile /> : <Navigate to="/login" />} 
             />
 
             <Route path="/login" element={<Login />} />

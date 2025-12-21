@@ -177,3 +177,6 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'core.CustomUser'
+
+# Redirect to your frontend login if authentication fails
+LOGIN_URL = '/api/auth/login/'

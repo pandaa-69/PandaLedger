@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Wallet, PieChart, LogOut } from "lucide-react";
+import { LayoutDashboard, Wallet, PieChart, LogOut, User } from "lucide-react"; // 👈 Added User icon
 
 function Navbar() {
   const [user, setUser] = useState(null);
@@ -48,7 +48,6 @@ function Navbar() {
             <Link to="/ledger" className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${isActive("/ledger")}`}>
               <Wallet size={16} /> Ledger
             </Link>
-            {/* 👇 HERE IS THE LINK */}
             <Link to="/portfolio" className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border transition-all ${isActive("/portfolio")}`}>
               <PieChart size={16} /> Portfolio
             </Link>
@@ -59,9 +58,17 @@ function Navbar() {
         <div className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
-              <span className="hidden text-sm font-medium text-gray-300 sm:block">
-                Hi, <span className="text-white font-bold">{user}</span>
-              </span>
+              
+              {/* 👇 UPDATED: Profile Link */}
+              <Link to="/profile" className="hidden sm:flex items-center gap-2 group/profile">
+                 <div className="h-8 w-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 transition-colors group-hover/profile:bg-cyan-500/30">
+                    <User size={16} />
+                 </div>
+                 <span className="text-sm font-medium text-gray-300 group-hover/profile:text-white transition-colors">
+                    Hi, <span className="font-bold">{user}</span>
+                 </span>
+              </Link>
+
               <button onClick={handleLogout} className="group flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 transition-all hover:bg-red-500/20 active:scale-95">
                 <LogOut size={16} className="group-hover:-translate-x-0.5 transition-transform"/>
                 <span className="hidden sm:inline">Exit</span>

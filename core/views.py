@@ -3,6 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.db import IntegrityError
 import json 
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 
 @csrf_exempt
 def signup_api(request):
@@ -56,3 +58,43 @@ def logout_api(request):
         'error':'Method not allowed'},
         status = 405
     )
+
+
+
+@csrf_exempt
+@login_required
+def user_profile(request):
+    """
+    GET: Returns user details (username, email, join date)
+    PUT: Updates email and password
+    """
+    if request.method == 'GET':
+        return JsonResponse({
+            "username": request.user.username,
+            "email": request.user.email,
+            "date_joined": request.user.date_joined.strftime("%b %d, %Y")
+        })
+
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            user = request.user
+            
+            # 1. Update Email
+            if 'email' in data:
+                user.email = data['email']
+            
+            # 2. Update Password (if provided)
+            if 'new_password' in data and data['new_password']:
+                user.set_password(data['new_password'])
+                user.save()
+                # Important: This keeps the user logged in after password change
+                update_session_auth_hash(request, user) 
+            else:
+                user.save()
+                
+            return JsonResponse({"message": "Profile updated successfully!"})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+            
+    return JsonResponse({"error": "Method not allowed"}, status=405)
