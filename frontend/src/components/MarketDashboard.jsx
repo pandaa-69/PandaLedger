@@ -3,23 +3,22 @@ import {
     TrendingUp, TrendingDown, Newspaper, RefreshCw, Clock, Globe, 
     ChevronDown, MapPin, Zap
 } from 'lucide-react';
-import MarketCard from './MarketCard'; // 👈 Import the new card!
+import MarketCard from './MarketCard';
+import NewsModal from './NewsModal'; // 👈 1. Import the Modal
 
 // --- INTERNAL COMPONENTS ---
-// 1. Live Clock (Updates every second) 🕒
+// 1. Live Clock
 const LiveClock = ({ city, timeZone, isActive, onClick }) => {
     const [time, setTime] = useState("");
-    
     useEffect(() => {
         const update = () => {
-             // Intl API handles timezones perfectly
              const t = new Intl.DateTimeFormat('en-US', {
                 timeZone, hour: '2-digit', minute: '2-digit', hour12: false
             }).format(new Date());
             setTime(t);
         };
         update();
-        const i = setInterval(update, 1000); // Tick every second
+        const i = setInterval(update, 1000);
         return () => clearInterval(i);
     }, [timeZone]);
 
@@ -38,7 +37,7 @@ const LiveClock = ({ city, timeZone, isActive, onClick }) => {
     );
 };
 
-// 2. Ticker Tape (Scrolling Bar)
+// 2. Ticker Tape
 const TickerTape = ({ items }) => {
     const tickerItems = [...items, ...items]; 
     return (
@@ -111,10 +110,12 @@ const MarketDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeCity, setActiveCity] = useState(null); 
+    const [selectedArticle, setSelectedArticle] = useState(null); // 👈 2. State for Modal
+
     const marketStatus = getMarketStatus();
 
     const fetchData = (isAutoRefresh = false) => {
-        if (!isAutoRefresh) setRefreshing(true); // Show spinner only on manual click
+        if (!isAutoRefresh) setRefreshing(true); 
         
         fetch('http://127.0.0.1:8000/api/dashboard/live/')
             .then(res => res.ok ? res.json() : Promise.reject("Failed"))
@@ -130,14 +131,11 @@ const MarketDashboard = () => {
             });
     };
 
-    // 🔄 Auto-Poll Effect
     useEffect(() => { 
-        fetchData(); // Initial load
-
+        fetchData(); 
         const interval = setInterval(() => {
-            fetchData(true); // Pass true to hide spinner
-        }, 30000); // 30 seconds
-
+            fetchData(true); 
+        }, 30000); 
         return () => clearInterval(interval);
     }, []);
 
@@ -169,15 +167,14 @@ const MarketDashboard = () => {
             {/* Ticker Tape */}
             <TickerTape items={data.market_summary} />
 
-            {/* 1. ASSET GRAPHS (Now using MarketCard!) */}
+            {/* 1. ASSET GRAPHS */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-6">
                 {data.market_summary.map((item) => (
-                    // We render the separated MarketCard here
                     <MarketCard key={item.id} item={item} />
                 ))}
             </div>
 
-            {/* 2. GLOBAL CLOCKS (Now Live!) */}
+            {/* 2. GLOBAL CLOCKS */}
             <div className="mb-8">
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                     <div className="flex items-center gap-2 rounded-full bg-black/40 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
@@ -197,7 +194,6 @@ const MarketDashboard = () => {
                     })}
                 </div>
 
-                {/* City Details (Same as before) */}
                 {activeCity && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div className="flex items-center justify-between rounded-lg border border-cyan-500/30 bg-cyan-900/10 p-4 backdrop-blur-md">
@@ -220,7 +216,7 @@ const MarketDashboard = () => {
                 )}
             </div>
 
-            {/* 3. NEWS (Kept Inline for simplicity) */}
+            {/* 3. NEWS (Now opens Modal!) */}
             <h3 className="mt-8 mb-4 flex items-center gap-2 text-base md:text-lg font-bold text-gray-200 px-1">
                 <Newspaper size={18} className="text-cyan-400" /> 
                 Market News
@@ -228,7 +224,11 @@ const MarketDashboard = () => {
             
             <div className="flex gap-3 overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible">
                 {data.news.map((newsItem, index) => (
-                    <a key={index} href={newsItem.link} target="_blank" rel="noreferrer" className="min-w-[280px] md:min-w-0 flex gap-3 rounded-xl border border-white/5 bg-white/5 p-3 transition-all hover:border-cyan-500/30 hover:bg-white/10">
+                    <div 
+                        key={index} 
+                        onClick={() => setSelectedArticle(newsItem)} // 👈 Open Modal
+                        className="cursor-pointer min-w-[280px] md:min-w-0 flex gap-3 rounded-xl border border-white/5 bg-white/5 p-3 transition-all hover:border-cyan-500/30 hover:bg-white/10"
+                    >
                         <div className="flex flex-1 flex-col justify-between">
                             <div>
                                 <div className="mb-1 flex items-center gap-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-500">
@@ -242,9 +242,17 @@ const MarketDashboard = () => {
                             </div>
                         </div>
                         <SafeNewsImage src={newsItem.image} alt="news" />
-                    </a>
+                    </div>
                 ))}
             </div>
+
+            {/* 4. RENDER MODAL */}
+            {selectedArticle && (
+                <NewsModal 
+                    article={selectedArticle} 
+                    onClose={() => setSelectedArticle(null)} 
+                />
+            )}
         </div>
     );
 };

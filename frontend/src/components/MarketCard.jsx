@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Coins, Bitcoin } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from 'recharts';
+
+// 👇 1. Import Odometer and its CSS
+import Odometer from 'react-odometerjs';
+import 'odometer/themes/odometer-theme-default.css'; 
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -28,6 +32,12 @@ const MarketCard = ({ item }) => {
     if (item.id === 'silver') { color = '#94a3b8'; Icon = Coins; iconColor = 'text-slate-400'; bgBadge = 'bg-slate-500/10 border-slate-500/20'; }
     if (item.id === 'bitcoin') { color = '#f97316'; Icon = Bitcoin; iconColor = 'text-orange-400'; bgBadge = 'bg-orange-500/10 border-orange-500/20'; }
 
+    // 👇 Helper to fix Odometer hydration issues (React needs values to be loaded)
+    const [price, setPrice] = useState(0);
+    useEffect(() => {
+        setPrice(item.price);
+    }, [item.price]);
+
     return (
         <div className="group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3 sm:p-5 backdrop-blur-sm transition-all hover:border-white/20 hover:shadow-lg hover:-translate-y-1 duration-300">
             
@@ -43,10 +53,14 @@ const MarketCard = ({ item }) => {
                     </div>
                 </div>
 
-                {/* 👇 THE ANIMATION MAGIC IS HERE */}
-                {/* We use key={item.price}. When price changes, React rebuilds this div, triggering the animation. */}
-                <div key={item.price} className="text-lg sm:text-2xl font-bold text-white tracking-tight animate-in slide-in-from-bottom-2 fade-in duration-500">
-                    {symbol}{item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {/* 👇 NEW: ODOMETER COMPONENT */}
+                <div className="flex items-baseline gap-0.5 text-lg sm:text-2xl font-bold text-white tracking-tight mt-1">
+                    <span>{symbol}</span>
+                    <Odometer 
+                        value={price} 
+                        format="(,ddd).dd" 
+                        theme="default"
+                    />
                 </div>
             </div>
 

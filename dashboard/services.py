@@ -108,7 +108,7 @@ def fetch_live_data_and_save():
 
         # --- SAVE TO DB & CACHE ---
         # 1. Cache for Speed (10 mins)
-        cache.set('market_dashboard_full', dashboard_data, 60)
+        cache.set('market_dashboard_full', dashboard_data, 600)
         
         # 2. DB for Backup (Permanent until next update)
         # We use update_or_create to ensure we only ever have 1 row

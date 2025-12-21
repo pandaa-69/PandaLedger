@@ -57,3 +57,53 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #06b6d4; /* Cyan-500 hover effect */
 }
+
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpFade 0.5s ease-out forwards;
+}
+
+/* --- ODOMETER OVERRIDES (CORRECTED) --- */
+
+/* 1. Make the container use your font */
+.odometer {
+    font-family: inherit !important;
+}
+
+/* 2. THE IMPORTANT PART: Make text WHITE and remove background */
+.odometer.odometer-auto-theme, 
+.odometer.odometer-theme-default {
+    background: transparent !important;
+    color: white !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* 3. Style the individual digits */
+.odometer .odometer-digit {
+    background: transparent !important;
+    color: white !important;
+}
+
+/* 4. DO NOT HIDE THIS! Just make sure it's the right color */
+/* This spacer gives the number its width. */
+.odometer .odometer-digit .odometer-digit-spacer {
+    display: inline-block !important; 
+    visibility: hidden !important; /* Hide the helper text, but keep the space! */
+}
+
+/* 5. Ensure the inner ribbon (the sliding numbers) is visible */
+.odometer .odometer-digit .odometer-value {
+    color: white !important;
+    background: transparent !important;
+}
