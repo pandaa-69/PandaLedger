@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'portfolio',
     'dashboard',
     'ledger',
+    'analytics',
+    
     
 ]
 

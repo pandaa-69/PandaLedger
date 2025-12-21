@@ -1,16 +1,20 @@
 import React from "react";
 import AddExpenseForm from "../components/AddExpenseForm";
+import BudgetCard from "../components/ledger/BudgetCard"; // 👈 Import the new component
 import { Trash2, Wallet, ArrowDownCircle } from "lucide-react";
 
-function Ledger({ expenses }) {
+function Ledger({ expenses, onTransactionUpdate }) { 
+  
   // Simple delete logic
   const handleDelete = (id) => {
     if (!confirm("Delete transaction?")) return;
-    fetch(`http://127.0.0.1:8000/api/expenses/delete/${id}/`, {
+    fetch(`http://127.0.0.1:8000/api/expenses/delete/${id}/`, { // Note: using original endpoint
       method: "DELETE",
       credentials: "include",
     }).then((res) => {
-      if (res.ok) window.location.reload();
+      if (res.ok) {
+        window.location.reload(); 
+      }
     });
   };
 
@@ -21,9 +25,9 @@ function Ledger({ expenses }) {
     });
 
   return (
-    <div className="mx-auto max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="mx-auto max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-4">
+      <div className="mb-8 flex items-center gap-4 pt-8">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">
           <Wallet size={24} />
         </div>
@@ -33,9 +37,12 @@ function Ledger({ expenses }) {
         </div>
       </div>
 
+      {/* 📊 NEW: Budget Progress Card */}
+      <BudgetCard />
+
       {/* 1. Add Expense Form */}
       <div className="mb-10">
-        <AddExpenseForm />
+        <AddExpenseForm onSuccess={() => window.location.reload()} />
       </div>
 
       {/* 2. Transaction List */}

@@ -1,47 +1,30 @@
 import React, { useState, useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-// Import Components
+// Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import LoadingScreen from "./components/LoadingScreen";
 import MobileNav from "./components/MobileNav";
-import WealthCalculator from "./components/WealthCalculator"; // <--- Import it here
 
-// Import Pages
+// Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Ledger from "./pages/Ledger";
+import Portfolio from "./pages/Portfolio"; // <--- IMPORT THIS ✅
 import NotFound from "./pages/NotFound";
-
-// The New Portfolio Page
-const Portfolio = () => (
-  <div className="animate-in fade-in duration-700">
-      <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">Portfolio Planner</h1>
-          <p className="text-gray-400">Calculate your future wealth or retirement corpus.</p>
-      </div>
-      <WealthCalculator />
-  </div>
-);
 
 function App() {
   const [expenses, setExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Keep your existing fetch logic!
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/expenses/", {
       method: "GET",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     })
       .then((response) => {
         if (response.status === 401 || response.status === 403) {
@@ -51,19 +34,13 @@ function App() {
         return response.json();
       })
       .then((data) => {
-        if (data) {
-          setExpenses(data.results || data);
-        }
+        if (data) setExpenses(data.results || data);
       })
       .catch((error) => console.error("Error fetching data:", error))
-      .finally(() => {
-        setTimeout(() => setLoading(false), 800);
-      });
+      .finally(() => setTimeout(() => setLoading(false), 800));
   }, []);
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
     <Router>
@@ -76,32 +53,26 @@ function App() {
             
             <Route
               path="/ledger"
-              element={
-                expenses ? (
-                  <Ledger expenses={expenses} />
-                ) : (
-                  <Navigate to="/login" />
-                )
-              }
+              element={expenses ? <Ledger expenses={expenses} /> : <Navigate to="/login" />}
             />
-            
-            {/* PORTFOLIO NOW ACTIVE */}
+
+            {/* 👇 THE NEW PORTFOLIO ROUTE */}
             <Route
               path="/portfolio"
               element={expenses ? <Portfolio /> : <Navigate to="/login" />}
             />
-            
+
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="*" element={<NotFound />} />        
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 
         {expenses && <MobileNav />}
-
         <Footer />
       </div>
     </Router>
   );
 }
+
 export default App;

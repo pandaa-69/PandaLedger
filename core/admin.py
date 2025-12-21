@@ -1,8 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser #importing our Custom user table 
+from .models import CustomUser
 
-# Register  new CustomUser using the standard UserAdmin logic
-admin.site.register(CustomUser, UserAdmin)
+class CustomUserAdmin(UserAdmin):
+    # Add our new fields to the "Personal info" section in Admin
+    fieldsets = UserAdmin.fieldsets + (
+        ('Financial Profile', {'fields': ('monthly_budget', 'risk_appetite')}),
+    )
+    list_display = ('username', 'email', 'monthly_budget', 'risk_appetite', 'is_staff')
 
-
+admin.site.register(CustomUser, CustomUserAdmin)

@@ -16,13 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path , include
-from portfolio.views import home
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('portfolio', include('portfolio.urls')),
-    path('',include('dashboard.urls')),
+    path('api/portfolio/', include('portfolio.urls')),
     path('api/', include('ledger.urls')),
     path('api/', include('core.urls')),
     path('api/', include('dashboard.urls')),
+    path('api/', include('analytics.urls')),
 ]

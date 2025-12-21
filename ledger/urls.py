@@ -5,4 +5,6 @@ urlpatterns = [
     path('expenses/', views.get_expenses, name='get_expenses'),
     path('expenses/add/', views.add_expense, name="add_expense"),
     path('expenses/delete/<int:id>/', views.delete_expense, name="delete_expense"),
+    path('stats/', views.get_ledger_stats, name='ledger_stats'),
+    path('budget/update/', views.update_budget, name='update_budget'),
 ]

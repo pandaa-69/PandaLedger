@@ -1,126 +1,106 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MarketDashboard from "../components/MarketDashboard";
 import { Link } from "react-router-dom";
-import { ArrowRight, Wallet, AlertTriangle, Edit2, Check } from "lucide-react";
+import { ArrowRight, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 import WealthCalculator from "../components/WealthCalculator";
 
-// --- COMPONENT: BUDGET BAR (Keep this here for Logged In users) ---
-const BudgetProgressBar = ({ monthlySpend }) => {
-    const [budget, setBudget] = useState(() => {
-        return localStorage.getItem("userBudget") || 20000;
-    });
-    const [isEditing, setIsEditing] = useState(false);
-    const [tempBudget, setTempBudget] = useState(budget);
+function Home() {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    const saveBudget = () => {
-        localStorage.setItem("userBudget", tempBudget);
-        setBudget(tempBudget);
-        setIsEditing(false);
-    };
-
-    const percentage = Math.min(Math.round((monthlySpend / budget) * 100), 100);
-    
-    let color = "bg-green-500";
-    if (percentage > 50) color = "bg-yellow-500";
-    if (percentage > 85) color = "bg-red-500";
-
-    return (
-        <div className="rounded-xl border border-white/10 bg-black/40 p-5 backdrop-blur-sm">
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-400">
-                    <AlertTriangle size={16} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Monthly Limit</span>
-                </div>
-                
-                {isEditing ? (
-                    <div className="flex items-center gap-2">
-                        <input 
-                            type="number" 
-                            value={tempBudget}
-                            onChange={(e) => setTempBudget(e.target.value)}
-                            className="w-20 rounded bg-white/10 px-2 py-1 text-right text-sm font-bold text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                            autoFocus
-                        />
-                        <button onClick={saveBudget} className="rounded-full bg-cyan-500/20 p-1 text-cyan-400 hover:bg-cyan-500/30">
-                            <Check size={14} />
-                        </button>
-                    </div>
-                ) : (
-                    <button onClick={() => setIsEditing(true)} className="flex items-center gap-1 text-sm font-bold text-white hover:text-cyan-400">
-                        ₹{parseInt(budget).toLocaleString()} <Edit2 size={12} className="opacity-50" />
-                    </button>
-                )}
-            </div>
-
-            <div className="relative h-4 w-full overflow-hidden rounded-full bg-white/10">
-                <div 
-                    className={`h-full transition-all duration-1000 ease-out ${color}`} 
-                    style={{ width: `${percentage}%` }}
-                ></div>
-            </div>
-            
-            <div className="mt-2 flex justify-between text-xs font-medium">
-                <span className={percentage > 85 ? "text-red-400" : "text-gray-400"}>
-                    {percentage}% Used
-                </span>
-                <span className="text-gray-500">
-                    Remaining: <span className="text-white">₹{(budget - monthlySpend).toLocaleString()}</span>
-                </span>
-            </div>
-        </div>
-    );
-};
-
-
-function Home({ expenses }) {
-  const user = localStorage.getItem('user')?.replace(/"/g, '');
-
-  let monthlySpend = 0;
-  let txCount = 0;
-  if (expenses) {
-    const currentMonth = new Date().getMonth();
-    expenses.forEach(tx => {
-        if (new Date(tx.date).getMonth() === currentMonth) {
-            monthlySpend += parseFloat(tx.amount);
-            txCount++;
-        }
-    });
-  }
+  useEffect(() => {
+    // 1. Fetch the "Command Center" Data 📡
+    fetch("http://127.0.0.1:8000/api/analytics/home-summary/", {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error("Not logged in");
+      })
+      .then((data) => {
+        setSummary(data); // ✅ We got the data!
+        setLoading(false);
+      })
+      .catch(() => {
+        setSummary(null); // ❌ Not logged in
+        setLoading(false);
+      });
+  }, []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-6xl animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
-      {/* 1. WELCOME / HERO SECTION */}
-      <div className="mb-8">
-        
-        {/* LOGGED IN VIEW */}
-        {user ? (
+      {/* 1. HERO SECTION */}
+      <div className="mb-8 pt-8">
+        {summary ? (
+            // 🟢 LOGGED IN VIEW 🟢
             <>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-6 px-1">
-                    Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{user}</span>.
+                    Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 capitalize">{summary.username}</span>.
                 </h1>
                 
-                <div className="grid gap-4 md:grid-cols-3 mb-8">
-                    {/* Monthly Spend */}
-                    <Link to="/ledger" className="group rounded-xl border border-white/10 bg-gradient-to-br from-cyan-900/20 to-black p-5 backdrop-blur-sm transition-all hover:border-cyan-500/50">
-                        <div className="flex items-center gap-2 text-cyan-400 mb-2">
-                            <Wallet size={16} />
-                            <span className="text-xs font-bold uppercase tracking-widest group-hover:text-cyan-300">This Month</span>
+                <div className="grid gap-6 md:grid-cols-2 mb-12">
+                    
+                    {/* Card 1: The Wallet (Ledger Link) */}
+                    <Link to="/ledger" className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gray-900 p-8 transition-all hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/10">
+                        <div className="absolute right-0 top-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-purple-500/10 blur-3xl transition-all group-hover:bg-purple-500/20"></div>
+                        
+                        <div className="flex items-center gap-3 text-purple-400 mb-4">
+                            <div className="p-2 bg-purple-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                                <Wallet size={24} />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest">Expense Tracker</span>
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-white">
-                            ₹{monthlySpend.toLocaleString()}
+
+                        <div className="space-y-1">
+                            <div className="text-gray-400 text-sm font-medium">This Month's Spend</div>
+                            <div className="flex items-baseline gap-2">
+                                <div className="text-4xl font-black text-white">₹{summary.monthly_spend.toLocaleString()}</div>
+                                <div className="text-gray-500 font-bold">/ ₹{summary.monthly_budget.toLocaleString()}</div>
+                            </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{txCount} transactions</p>
+
+                        {/* Mini Progress Bar */}
+                        <div className="mt-6 w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full rounded-full ${ summary.monthly_spend > summary.monthly_budget ? 'bg-red-500' : 'bg-purple-500'} transition-all duration-1000`} 
+                                style={{ width: `${Math.min((summary.monthly_spend / summary.monthly_budget) * 100, 100)}%` }}
+                            ></div>
+                        </div>
+                        
+                        {summary.monthly_spend > summary.monthly_budget && (
+                            <div className="mt-3 flex items-center gap-2 text-xs text-red-400 font-bold animate-pulse">
+                                <AlertTriangle size={12} /> Over Budget!
+                            </div>
+                        )}
                     </Link>
 
-                    {/* Budget Bar */}
-                    <div className="md:col-span-2">
-                        <BudgetProgressBar monthlySpend={monthlySpend} />
-                    </div>
+                    {/* Card 2: The Vault (Portfolio Link) */}
+                    <Link to="/portfolio" className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gray-900 p-8 transition-all hover:border-cyan-500/50 hover:shadow-2xl hover:shadow-cyan-500/10">
+                        <div className="absolute right-0 top-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-cyan-500/10 blur-3xl transition-all group-hover:bg-cyan-500/20"></div>
+                        
+                        <div className="flex items-center gap-3 text-cyan-400 mb-4">
+                            <div className="p-2 bg-cyan-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                                <TrendingUp size={24} />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest">Investment Portfolio</span>
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="text-gray-400 text-sm font-medium">Total Net Worth</div>
+                            <div className="text-4xl font-black text-white">₹{summary.net_worth.toLocaleString()}</div>
+                        </div>
+
+                        <div className="mt-6 flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest group-hover:text-cyan-400 transition-colors">
+                            View Analytics <ArrowRight size={14} />
+                        </div>
+                    </Link>
+
                 </div>
             </>
         ) : (
-            // LOGGED OUT VIEW (HERO ONLY)
+            // ⚪ LOGGED OUT VIEW ⚪
+            !loading && (
             <div className="py-12 text-center">
                 <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6">
                   Master Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-green-400">Wealth</span>.
@@ -132,14 +112,15 @@ function Home({ expenses }) {
                     Start Tracking <ArrowRight size={18} />
                 </Link>
             </div>
+            )
         )}
       </div>
 
-      {/* 2. MARKET DASHBOARD (Now back at the top!) */}
+      {/* 2. MARKET DASHBOARD (Always Visible) */}
       <MarketDashboard />
 
-      {/* 3. WEALTH CALCULATOR (Bottom Filler for Logged Out Users) */}
-      {!user && (
+      {/* 3. CALCULATOR (Only for logged OUT users as a demo) */}
+      {!summary && !loading && (
         <div className="mt-16 border-t border-white/10 pt-10">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-white">Plan Your Future</h2>
