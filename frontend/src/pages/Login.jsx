@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Loader2, LogIn, Eye, EyeOff } from "lucide-react"; // Added Eye icons
+import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 
 function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New State
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
@@ -24,7 +24,6 @@ function Login() {
       })
       .then((data) => {
         localStorage.setItem("user", JSON.stringify(data.username));
-        // Force reload to update Navbar immediately
         window.location.href = "/"; 
       })
       .catch((err) => {
@@ -65,19 +64,25 @@ function Login() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              Password
-            </label>
+            {/* 👇 Flex container for Label + Forgot Link */}
+            <div className="flex justify-between items-center">
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                Password
+                </label>
+                <Link to="/forgot-password" class="text-xs font-bold text-cyan-500 hover:text-cyan-400 hover:underline transition-colors">
+                    Forgot Password?
+                </Link>
+            </div>
+            
             <div className="relative">
                 <input
-                type={showPassword ? "text" : "password"} // Dynamic Type
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
                 onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                 }
                 />
-                {/* 👁️ THE EYE TOGGLE BUTTON */}
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}

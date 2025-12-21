@@ -15,6 +15,8 @@ import Ledger from "./pages/Ledger";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword'; 
+import ResetPasswordConfirm from './pages/ResetPasswordConfirm';
 
 function App() {
   const [expenses, setExpenses] = useState(null);
@@ -62,11 +64,15 @@ function App() {
               element={expenses ? <Portfolio /> : <Navigate to="/login" />}
             />
 
-            {/* 👇 PROTECTED PROFILE ROUTE */}
             <Route 
               path="/profile" 
               element={expenses ? <Profile /> : <Navigate to="/login" />} 
             />
+
+            
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            <Route path="/reset-password/:uid/:token" element={<ResetPasswordConfirm />} />
 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
