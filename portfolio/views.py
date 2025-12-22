@@ -1,11 +1,10 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from django.core.management import call_command  # 👈 Needed for the secret seed
+from django.core.management import call_command
 from .models import Asset, Holding, Transaction
 import json
 import yfinance as yf
-import requests  # 👈 Needed for the User-Agent fix
 from datetime import date
 from analytics.services.backfill import backfill_portfolio_history
 from django.utils import timezone
@@ -21,7 +20,7 @@ def detect_asset_type(info, symbol, name):
     if sType == 'CRYPTOCURRENCY' or '-USD' in symbol_upper:
         return 'CRYPTO'
     
-    # 2. REITs (Check Name FIRST)
+    # 2. REITs
     if 'REIT' in name_upper or sType == 'REIT':
         return 'REIT'
 
@@ -44,7 +43,7 @@ def detect_asset_type(info, symbol, name):
     return 'STOCK'
 
 
-# 1. SEARCH API (Updated: Local DB Check + Lazy Loading + Cloud Bypass)
+# 1. SEARCH API (Updated: Removed manual session to fix Crash)
 def search_asset(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -62,16 +61,10 @@ def search_asset(request):
     # 2. If DB has low results, ask Yahoo (The "Filler" Part)
     if len(results) < 3 and len(query) > 2:
         try:
-            # 🛠️ THE FIX: Fake a Browser to bypass Render blocking
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            })
-
             yahoo_symbol = f"{query}.NS" if not ("-" in query or "." in query) else query
             
-            # Pass the session to yf.Ticker
-            ticker = yf.Ticker(yahoo_symbol, session=session)
+            # 🛠️ FIX: Removed 'session=session'. Let yfinance handle the browser faking.
+            ticker = yf.Ticker(yahoo_symbol)
             
             # Fetch Data
             try:
@@ -83,11 +76,11 @@ def search_asset(request):
                 sector = full_info.get('sector', 'Other')
                 mcap = full_info.get('marketCap', 0)
                 
-                # Mcap Logic (Indian Context in Crores approx)
+                # Mcap Logic
                 mcap_cat = 'MID'
-                if mcap > 200000000000: # > 20,000 Cr
+                if mcap > 200000000000: 
                     mcap_cat = 'LARGE'
-                elif mcap < 50000000000: # < 5,000 Cr
+                elif mcap < 50000000000: 
                     mcap_cat = 'SMALL'
                 
             except:
@@ -118,32 +111,30 @@ def search_asset(request):
                     "price": price
                 })
         except Exception as e:
-            # Log error but don't crash, just return what we have
             print(f"Yahoo Fetch Failed: {e}")
             pass
             
     return JsonResponse(results, safe=False)
 
 
-# --- HELPER: SMART BULK UPDATE (With Cooldown) ---
+# --- HELPER: ROBUST UPDATE (Fixed: No Session) ---
 def update_live_prices(holdings):
     """
-    Checks timestamps. Only fetches from Yahoo if data is older than 10 minutes.
+    Checks timestamps. Only fetches from Yahoo if data is older than 10 minutes OR price is 0.
     """
-    # 1. Identify which assets are "Stale" (Older than 10 mins)
+    # 1. Identify which assets are "Stale"
     cooldown_time = timezone.now() - timedelta(minutes=10)
     
-    # Filter holdings where the asset hasn't been updated recently
+    # Filter holdings where the asset hasn't been updated recently or has 0 price
     assets_to_update = []
     symbols_to_fetch = []
 
     for h in holdings:
-        # If asset is new OR updated more than 10 mins ago
         if h.asset.updated_at < cooldown_time or h.asset.last_price == 0:
             assets_to_update.append(h.asset)
             symbols_to_fetch.append(h.asset.symbol)
 
-    # 2. If everyone is fresh, DO NOTHING (Saves API calls!) 🛑
+    # 2. If everyone is fresh, DO NOTHING
     if not symbols_to_fetch:
         print("✅ All assets are fresh (Cached). Skipping API call.")
         return
@@ -151,18 +142,14 @@ def update_live_prices(holdings):
     print(f"🔄 Cache expired for {len(symbols_to_fetch)} assets. Fetching live...")
     
     try:
-        # 🛠️ THE FIX: Use session here too for bulk updates
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
-
-        # 3. Fetch ONLY the stale symbols
-        tickers = yf.Tickers(" ".join(symbols_to_fetch), session=session)
+        # 🛠️ FIX: Removed 'session=session'. Let yfinance handle it.
+        # Sending one bulk request
+        tickers = yf.Tickers(" ".join(symbols_to_fetch))
         
         updated_count = 0
         for asset in assets_to_update:
             try:
+                # Accessing .tickers[symbol] is instant after the bulk init
                 latest_price = tickers.tickers[asset.symbol].fast_info.last_price
                 if latest_price and latest_price > 0:
                     asset.last_price = latest_price
@@ -323,10 +310,8 @@ def get_holding_details(request, asset_id):
         return JsonResponse({"error": "Holding not found"}, status=404)
 
 
-# 6. 🔓 SECRET SEED TRIGGER (Bypass Paid Shell)
-# Visit /api/portfolio/secret-seed-db/ to run this
+# 6. 🔓 SECRET SEED TRIGGER
 def seed_db_view(request):
-    # Only allow Superusers (Admin) to run this!
     if not request.user.is_superuser: 
         return HttpResponse("Unauthorized: Admins only.", status=403)
     
