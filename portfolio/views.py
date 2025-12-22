@@ -1,14 +1,15 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command  # 👈 Needed for the secret seed
 from .models import Asset, Holding, Transaction
 import json
 import yfinance as yf
+import requests  # 👈 Needed for the User-Agent fix
 from datetime import date
 from analytics.services.backfill import backfill_portfolio_history
 from django.utils import timezone
 from datetime import timedelta
-
 
 # --- HELPER: SMART ASSET DETECTION 🧠 ---
 def detect_asset_type(info, symbol, name):
@@ -21,17 +22,14 @@ def detect_asset_type(info, symbol, name):
         return 'CRYPTO'
     
     # 2. REITs (Check Name FIRST)
-    # Catches: Mindspace REIT, Embassy Office Parks REIT
     if 'REIT' in name_upper or sType == 'REIT':
         return 'REIT'
 
     # 3. GOLD / SILVER
-    # Catches: GOLDBEES, SILVERBEES
     if 'GOLD' in name_upper or 'SILVER' in name_upper:
         return 'GOLD'
     
     # 4. ETFs
-    # Catches: MON100, NIFTYBEES, BANKBEES
     if ('ETF' in name_upper or 
         'BEES' in name_upper or 
         'MON100' in symbol_upper or
@@ -44,9 +42,9 @@ def detect_asset_type(info, symbol, name):
 
     # Default
     return 'STOCK'
-# 1. SEARCH API
-# 1. SEARCH API (Updated for Sector & Market Cap)
 
+
+# 1. SEARCH API (Updated: Local DB Check + Lazy Loading + Cloud Bypass)
 def search_asset(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -55,14 +53,47 @@ def search_asset(request):
     if not query:
         return JsonResponse([], safe=False)
 
-    # Local Search
+    # 1. Local Search (Fast DB Check)
     assets = Asset.objects.filter(name__icontains=query) | Asset.objects.filter(symbol__icontains=query)
+    
+    # 👇 LAZY LOADING: Check if we have "Zero Price" assets in the results
+    # If we do, fetch their live price NOW so the user sees real data.
+    for asset in assets[:5]:
+        if asset.last_price == 0:
+            try:
+                # Quick fetch for this single asset
+                print(f"🔄 Lazy loading price for {asset.symbol}...")
+                session = requests.Session()
+                session.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                })
+                
+                t = yf.Ticker(asset.symbol, session=session)
+                price = t.fast_info.last_price
+                
+                if price and price > 0:
+                    asset.last_price = price
+                    asset.save() # Update DB forever
+            except Exception as e:
+                print(f"⚠️ Lazy load failed for {asset.symbol}: {e}")
+                pass
+
+    # Convert DB assets to JSON results
     results = [{"id": a.id, "symbol": a.symbol, "name": a.name, "type": a.asset_type, "price": float(a.last_price)} for a in assets[:5]]
 
+    # 2. If DB has low results, ask Yahoo (The "Filler" Part)
     if len(results) < 3 and len(query) > 2:
         try:
+            # 🛠️ THE FIX: Fake a Browser to bypass Render blocking
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            })
+
             yahoo_symbol = f"{query}.NS" if not ("-" in query or "." in query) else query
-            ticker = yf.Ticker(yahoo_symbol)
+            
+            # Pass the session to yf.Ticker
+            ticker = yf.Ticker(yahoo_symbol, session=session)
             
             # Fetch Data
             try:
@@ -70,7 +101,7 @@ def search_asset(request):
                 price = full_info.get('currentPrice') or full_info.get('regularMarketPreviousClose')
                 name = full_info.get('longName', query)
                 
-                # --- NEW: Get Insights ---
+                # --- Get Insights ---
                 sector = full_info.get('sector', 'Other')
                 mcap = full_info.get('marketCap', 0)
                 
@@ -82,6 +113,7 @@ def search_asset(request):
                     mcap_cat = 'SMALL'
                 
             except:
+                # Fallback if .info fails
                 full_info = {}
                 price = ticker.fast_info.last_price
                 name = query
@@ -91,13 +123,14 @@ def search_asset(request):
             if price and price > 0:
                 detected_type = detect_asset_type(full_info, yahoo_symbol, name)
                 
+                # Create the asset in DB so next search is instant
                 new_asset = Asset.objects.create(
                     symbol=yahoo_symbol,
                     name=name,
                     last_price=price,
                     asset_type=detected_type,
-                    sector=sector,                # 👈 NEW
-                    market_cap_category=mcap_cat   # 👈 NEW
+                    sector=sector,
+                    market_cap_category=mcap_cat
                 )
                 results.append({
                     "id": new_asset.id, 
@@ -106,12 +139,12 @@ def search_asset(request):
                     "type": detected_type, 
                     "price": price
                 })
-        except:
+        except Exception as e:
+            # Log error but don't crash, just return what we have
+            print(f"Yahoo Fetch Failed: {e}")
             pass
             
     return JsonResponse(results, safe=False)
-
-# 2. GET PORTFOLIO (Updated to send Sector & Cap to Frontend)
 
 
 # --- HELPER: SMART BULK UPDATE (With Cooldown) ---
@@ -140,8 +173,14 @@ def update_live_prices(holdings):
     print(f"🔄 Cache expired for {len(symbols_to_fetch)} assets. Fetching live...")
     
     try:
+        # 🛠️ THE FIX: Use session here too for bulk updates
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+
         # 3. Fetch ONLY the stale symbols
-        tickers = yf.Tickers(" ".join(symbols_to_fetch))
+        tickers = yf.Tickers(" ".join(symbols_to_fetch), session=session)
         
         updated_count = 0
         for asset in assets_to_update:
@@ -156,14 +195,14 @@ def update_live_prices(holdings):
 
         # 4. Bulk Save (Updates 'updated_at' automatically)
         if updated_count > 0:
-            Asset.objects.bulk_update(assets_to_update, ['last_price', 'updated_at']) # Explicitly update timestamp
+            Asset.objects.bulk_update(assets_to_update, ['last_price', 'updated_at']) 
             print(f"✅ Updated {updated_count} assets from Yahoo.")
             
     except Exception as e:
         print(f"❌ Batch update failed: {e}")
 
 
-
+# 2. GET PORTFOLIO
 def get_portfolio(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -172,7 +211,6 @@ def get_portfolio(request):
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
     
     # 2. 🔥 UPDATE PRICES BEFORE CALCULATING 🔥
-    # Only run this if user has holdings
     if holdings.exists():
         update_live_prices(holdings)
         # Refresh holdings from DB to get the new prices we just saved
@@ -197,7 +235,7 @@ def get_portfolio(request):
             "market_cap_category": h.asset.market_cap_category,
             "qty": float(h.quantity),
             "avg_price": float(h.avg_buy_price),
-            "current_price": float(h.asset.last_price), # 👈 Now this is FRESH!
+            "current_price": float(h.asset.last_price),
             "current_value": current_val,
             "invested_value": round(invested_val, 2),
             "profit": round(profit, 2),
@@ -206,23 +244,22 @@ def get_portfolio(request):
         
         total_value += current_val
         total_invested += invested_val
-        total_profit = total_value - total_invested
 
-        total_profit_pct = (total_profit/total_invested*100) if total_invested>0 else 0
+    total_profit = total_value - total_invested
+    total_profit_pct = (total_profit/total_invested*100) if total_invested > 0 else 0
 
     return JsonResponse({
         "holdings": data,
         "summary": {
             "total_value": round(total_value, 2),
             "total_invested": round(total_invested, 2),
-            "total_profit": round(total_value - total_invested, 2),
-            "total_profit_pct":round(total_profit_pct, 2)
+            "total_profit": round(total_profit, 2),
+            "total_profit_pct": round(total_profit_pct, 2)
         }
     })
 
+
 # 3. ADD TRANSACTION
-
-
 def add_transaction(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -242,7 +279,6 @@ def add_transaction(request):
             )
             
             # 👇 TRIGGER THE TIME MACHINE 🕰️
-            # This rebuilds the graph history instantly after you add a trade.
             print("🔄 Triggering History Backfill...")
             try:
                 backfill_portfolio_history(request.user)
@@ -255,9 +291,8 @@ def add_transaction(request):
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({'error': 'POST method required'}, status=405)
 
-# 4. DELETE TRANSACTION (Updated with Backfill)
 
-
+# 4. DELETE TRANSACTION
 def delete_transaction(request, transaction_id):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -270,7 +305,6 @@ def delete_transaction(request, transaction_id):
             holding.recalculate()
             
             # 👇 TRIGGER THE TIME MACHINE 🕰️
-            # If you delete a trade, the past changes. We must rebuild.
             print("🔄 Triggering History Backfill...")
             try:
                 backfill_portfolio_history(request.user)
@@ -283,8 +317,8 @@ def delete_transaction(request, transaction_id):
             return JsonResponse({"error": "Transaction not found"}, status=404)
     return JsonResponse({'error': 'DELETE method required'}, status=405)
 
-# 5. GET HOLDING DETAILS
 
+# 5. GET HOLDING DETAILS
 def get_holding_details(request, asset_id):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
@@ -309,3 +343,17 @@ def get_holding_details(request, asset_id):
         })
     except Holding.DoesNotExist:
         return JsonResponse({"error": "Holding not found"}, status=404)
+
+
+# 6. 🔓 SECRET SEED TRIGGER (Bypass Paid Shell)
+# Visit /api/portfolio/secret-seed-db/ to run this
+def seed_db_view(request):
+    # Only allow Superusers (Admin) to run this!
+    if not request.user.is_superuser: 
+        return HttpResponse("Unauthorized: Admins only.", status=403)
+    
+    try:
+        call_command('seed_assets')
+        return HttpResponse("✅ Seed command executed successfully! Assets have been added to DB.")
+    except Exception as e:
+        return HttpResponse(f"❌ Error seeding DB: {str(e)}", status=500)
