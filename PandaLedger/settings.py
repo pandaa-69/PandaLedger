@@ -68,6 +68,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://pandaledger-api.onrender.com",
 ]
 
+
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 # 4. Cookie Security (Crucial for Vercel/Render Handshake)
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
