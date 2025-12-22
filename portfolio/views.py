@@ -56,28 +56,6 @@ def search_asset(request):
     # 1. Local Search (Fast DB Check)
     assets = Asset.objects.filter(name__icontains=query) | Asset.objects.filter(symbol__icontains=query)
     
-    # 👇 LAZY LOADING: Check if we have "Zero Price" assets in the results
-    # If we do, fetch their live price NOW so the user sees real data.
-    for asset in assets[:5]:
-        if asset.last_price == 0:
-            try:
-                # Quick fetch for this single asset
-                print(f"🔄 Lazy loading price for {asset.symbol}...")
-                session = requests.Session()
-                session.headers.update({
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                })
-                
-                t = yf.Ticker(asset.symbol, session=session)
-                price = t.fast_info.last_price
-                
-                if price and price > 0:
-                    asset.last_price = price
-                    asset.save() # Update DB forever
-            except Exception as e:
-                print(f"⚠️ Lazy load failed for {asset.symbol}: {e}")
-                pass
-
     # Convert DB assets to JSON results
     results = [{"id": a.id, "symbol": a.symbol, "name": a.name, "type": a.asset_type, "price": float(a.last_price)} for a in assets[:5]]
 
@@ -161,7 +139,7 @@ def update_live_prices(holdings):
 
     for h in holdings:
         # If asset is new OR updated more than 10 mins ago
-        if h.asset.updated_at < cooldown_time:
+        if h.asset.updated_at < cooldown_time or h.asset.last_price == 0:
             assets_to_update.append(h.asset)
             symbols_to_fetch.append(h.asset.symbol)
 
