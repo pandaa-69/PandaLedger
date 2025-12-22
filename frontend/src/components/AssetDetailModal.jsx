@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Calendar, Trash2, Plus } from "lucide-react"; 
 import { getCookie } from "../utils/csrf";
-import API_URL from './config';
+import API_URL from '../config'
 
 const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => { 
   const [details, setDetails] = useState(null);

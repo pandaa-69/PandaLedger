@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { getCookie } from "../utils/csrf";
-import API_URL from './config';
+import API_URL from '../config';
 
 function AddExpenseForm() {
   // 1. MY STATE: This is where I keep track of what I'm typing right now.

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Wallet, PieChart, LogOut, User } from "lucide-react"; // 👈 Added User icon
 import { getCookie } from "../utils/csrf";
-import API_URL from './config';
+import API_URL from '../config';
 
 function Navbar() {
   const [user, setUser] = useState(null);

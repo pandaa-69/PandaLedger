@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import MarketCard from './MarketCard';
 import NewsModal from './NewsModal'; // 👈 1. Import the Modal
-import API_URL from './config';
+import API_URL from '../config';
 // --- INTERNAL COMPONENTS ---
 // 1. Live Clock
 const LiveClock = ({ city, timeZone, isActive, onClick }) => {

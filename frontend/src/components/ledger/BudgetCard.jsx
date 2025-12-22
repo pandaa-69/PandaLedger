@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Edit2, Check, X } from 'lucide-react';
 import { getCookie } from '../../utils/csrf';
-import API_URL from './config';
-
+import API_URL from '../../config';
 const BudgetCard = ({ onBudgetChange }) => {
     const [stats, setStats] = useState({ total_spent: 0, monthly_budget: 0, percentage: 0 });
     const [isEditing, setIsEditing] = useState(false);
