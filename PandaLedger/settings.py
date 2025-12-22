@@ -59,10 +59,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://pandaledger-api.onrender.com",
 ]
 
-# This is the "secret" setting that stops 403 Forbidden on Render
-CSRF_ALLOWED_ORIGINS = [
-    "https://panda-ledger.vercel.app",
-]
+
 
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN" # Case-sensitive for middleware

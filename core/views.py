@@ -10,7 +10,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 
-@ensure_csrf_cookie
+
 def signup_api(request):
     if request.method == 'POST':
         try:
@@ -51,7 +51,7 @@ def signup_api(request):
 
 
 
-@ensure_csrf_cookie
+
 def login_api(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -85,16 +85,14 @@ def logout_api(request):
 
 
 
-# ... keep your imports ...
-from django.contrib.auth import get_user_model # Ensure this is imported
 
-@login_required
 def user_profile(request):
-    """
-    GET: Returns user details
-    PUT: Updates email and password (with uniqueness check)
-    """
-    # 1. GET Request (Display Data)
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"error": "Authentication required"},
+            status=401
+        )
+
     if request.method == 'GET':
         return JsonResponse({
             "username": request.user.username,
@@ -102,37 +100,35 @@ def user_profile(request):
             "date_joined": request.user.date_joined.strftime("%b %d, %Y")
         })
 
-    # 2. PUT Request (Update Data)
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
             user = request.user
-            User = get_user_model() # 👈 THIS FIXED THE ERROR
-            
-            # --- EMAIL UPDATE LOGIC ---
+            User = get_user_model()
+
             if 'email' in data:
                 new_email = data['email']
-                
-                # Check if email is already taken by SOMEONE ELSE
                 if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
-                    return JsonResponse({"error": "This email is already in use."}, status=400)
-                
+                    return JsonResponse(
+                        {"error": "This email is already in use."},
+                        status=400
+                    )
                 user.email = new_email
-            
-            # --- PASSWORD UPDATE LOGIC ---
-            if 'new_password' in data and data['new_password']:
+
+            if data.get('new_password'):
                 user.set_password(data['new_password'])
                 user.save()
-                update_session_auth_hash(request, user) # Keep logged in
+                update_session_auth_hash(request, user)
             else:
                 user.save()
-                
+
             return JsonResponse({"message": "Profile updated successfully!"})
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
-            
+
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 
 
