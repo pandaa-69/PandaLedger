@@ -84,6 +84,15 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+# 1. Add this to trust the Render Proxy
+# This tells Django it's okay that Render is sitting in front of it
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 2. Add these to ensure the cookies are sent correctly over the cloud
+CSRF_COOKIE_HTTPONLY = False  # Allows your React app to read the CSRF token
+SESSION_COOKIE_HTTPONLY = True
+CSRF_USE_SESSIONS = False # Keep this False for standard React + Django setups
+
 CSRF_COOKIE_SECURE=True
 SESSION_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SAMESITE = 'None'
