@@ -46,8 +46,11 @@ def detect_asset_type(info, symbol, name):
     return 'STOCK'
 # 1. SEARCH API
 # 1. SEARCH API (Updated for Sector & Market Cap)
-@login_required
+
 def search_asset(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     query = request.GET.get('q', '').strip().upper()
     if not query:
         return JsonResponse([], safe=False)
@@ -160,8 +163,11 @@ def update_live_prices(holdings):
         print(f"❌ Batch update failed: {e}")
 
 
-@login_required
+
 def get_portfolio(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     # 1. Get User's Holdings
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
     
@@ -216,8 +222,11 @@ def get_portfolio(request):
 
 # 3. ADD TRANSACTION
 
-@login_required
+
 def add_transaction(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -248,8 +257,11 @@ def add_transaction(request):
 
 # 4. DELETE TRANSACTION (Updated with Backfill)
 
-@login_required
+
 def delete_transaction(request, transaction_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     if request.method == 'DELETE':
         try:
             tx = Transaction.objects.get(id=transaction_id, holding__user=request.user)
@@ -272,8 +284,11 @@ def delete_transaction(request, transaction_id):
     return JsonResponse({'error': 'DELETE method required'}, status=405)
 
 # 5. GET HOLDING DETAILS
-@login_required
+
 def get_holding_details(request, asset_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     try:
         holding = Holding.objects.get(user=request.user, asset_id=asset_id)
         transactions = holding.transactions.all().order_by('-date')
