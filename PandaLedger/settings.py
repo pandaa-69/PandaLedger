@@ -9,7 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['pandaledger-api.onrender.com', 'localhost', '127.0.0.1']
+# Allow Vercel (for Proxy) and Render
+ALLOWED_HOSTS = ['pandaledger-api.onrender.com', 'panda-ledger.vercel.app', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -28,7 +29,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # Keep at the top
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -39,44 +40,44 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- 🛡️ CRITICAL PRODUCTION SECURITY SETTINGS ---
+# --- 🛡️ PRODUCTION SECURITY (PROXY MODE) ---
 SECURE_SSL_REDIRECT = True
-
-# 1. Proxy Trust (For Render)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# 2. CORS (For Handshake)
+# 1. CORS
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
     "https://panda-ledger.vercel.app",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
-# 3. CSRF Trusted Origins (The Triple Lock)
+# 2. CSRF
 CSRF_TRUSTED_ORIGINS = [
     "https://panda-ledger.vercel.app",
     "https://pandaledger-api.onrender.com",
+    "http://localhost:5173",
 ]
 
+# 3. CRITICAL: Allow Cookies on Vercel Domain
+CSRF_COOKIE_DOMAIN = None
+SESSION_COOKIE_DOMAIN = None
 
-
-CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN" # Case-sensitive for middleware
-
-# 4. Cookie Settings (Must match exactly)
+# 4. Standard Security
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_HTTPONLY = False  # Allows your csrf.js to read it
+CSRF_COOKIE_HTTPONLY = False 
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'None' # Crucial for different domains
+CSRF_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SAMESITE = 'None'
+
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 ROOT_URLCONF = 'PandaLedger.urls'
-
-# --- 🏢 TEMPLATES, DB, & OTHER SETTINGS ---
 
 TEMPLATES = [
     {
