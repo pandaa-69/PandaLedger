@@ -3,22 +3,14 @@ import os
 from dotenv import load_dotenv
 import dj_database_url
 
-# loading all my envs
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Allow Render's domain and local development
 ALLOWED_HOSTS = ['pandaledger-api.onrender.com', 'localhost', '127.0.0.1']
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -36,9 +28,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # Must be at the top
+    'corsheaders.middleware.CorsMiddleware', # Keep at the top
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware", # For static files on Render
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -47,41 +39,46 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- PRODUCTION SECURITY & CORS SETTINGS ---
+# --- 🛡️ CRITICAL PRODUCTION SECURITY SETTINGS ---
 
-# 1. Trust Render's HTTPS Proxy
+# 1. Proxy Trust (For Render)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# 2. CORS Configuration
+# 2. CORS (For Handshake)
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
     "https://panda-ledger.vercel.app",
     "http://localhost:5173",
-    "http://127.0.0.1:5173",
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
-# 3. CSRF Trusted Origins
+# 3. CSRF Trusted Origins (The Triple Lock)
 CSRF_TRUSTED_ORIGINS = [
     "https://panda-ledger.vercel.app",
     "https://pandaledger-api.onrender.com",
 ]
 
+# This is the "secret" setting that stops 403 Forbidden on Render
+CSRF_ALLOWED_ORIGINS = [
+    "https://panda-ledger.vercel.app",
+]
 
 CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
-# 4. Cookie Security (Crucial for Vercel/Render Handshake)
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN" # Case-sensitive for middleware
+
+# 4. Cookie Settings (Must match exactly)
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_HTTPONLY = False  # Allows React to read the token for requests
+CSRF_COOKIE_HTTPONLY = False  # Allows your csrf.js to read it
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None' # Crucial for different domains
 SESSION_COOKIE_SAMESITE = 'None'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
 ROOT_URLCONF = 'PandaLedger.urls'
+
+# --- 🏢 TEMPLATES, DB, & OTHER SETTINGS ---
 
 TEMPLATES = [
     {
@@ -100,7 +97,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'PandaLedger.wsgi.application'
 
-# Database configuration (Neon Postgres)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -134,7 +130,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (Whitenoise)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR/'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -143,7 +138,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'core.CustomUser'
 LOGIN_URL = '/api/auth/login/'
 
-# Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
