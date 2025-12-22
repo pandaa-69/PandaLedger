@@ -16,6 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path , include
+from django.contrib.auth import get_user_model
+from django.db.utils import IntegrityError
+
+# Auto-create a superuser for Render Free Tier
+User = get_user_model()
+try:
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('panda', 'panda@example.com', 'panda@69')
+        print("Superuser created successfully!")
+except Exception:
+    pass
 
 
 urlpatterns = [
