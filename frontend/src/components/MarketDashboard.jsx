@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import MarketCard from './MarketCard';
 import NewsModal from './NewsModal'; // 👈 1. Import the Modal
-
+import API_URL from './config';
 // --- INTERNAL COMPONENTS ---
 // 1. Live Clock
 const LiveClock = ({ city, timeZone, isActive, onClick }) => {
@@ -117,7 +117,7 @@ const MarketDashboard = () => {
     const fetchData = (isAutoRefresh = false) => {
         if (!isAutoRefresh) setRefreshing(true); 
         
-        fetch('http://127.0.0.1:8000/api/dashboard/live/')
+        fetch(`${API_URL}/api/dashboard/live/`)
             .then(res => res.ok ? res.json() : Promise.reject("Failed"))
             .then(newData => { 
                 setData(newData); 

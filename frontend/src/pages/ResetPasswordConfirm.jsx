@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
+import API_URL from './config';
 
 const ResetPasswordConfirm = () => {
     const navigate = useNavigate();
@@ -16,7 +17,7 @@ const ResetPasswordConfirm = () => {
         setLoading(true);
         
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/auth/reset-password-confirm/', {
+            const res = await fetch(`${API_URL}/api/auth/reset-password-confirm/`, {
                 method: 'POST',
                 headers: { 
                     "Content-Type": "application/json",

@@ -1,1 +1,1 @@
-web: gunicorn PandaLedger.wsgi
+web: gunicorn PandaLedger.wsgi --log-file -

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 import { getCookie } from '../utils/csrf';
+import API_URL from './config';
 
 function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -13,7 +14,7 @@ function Login() {
     e.preventDefault();
     setLoading(true);
 
-    fetch("http://127.0.0.1:8000/api/auth/login/", {
+    fetch(`${API_URL}/api/auth/login/`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",

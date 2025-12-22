@@ -7,6 +7,7 @@ import AddTransactionModal from "../components/AddTransactionModal";
 import AssetDetailModal from "../components/AssetDetailModal";
 import HoldingsTab from "../components/portfolio/HoldingsTab";
 import AnalyticsTab from "../components/portfolio/AnalyticsTab";
+import API_URL from './config';
 
 const Portfolio = () => {
   const [portfolio, setPortfolio] = useState({ holdings: [], summary: {} });
@@ -17,14 +18,14 @@ const Portfolio = () => {
   const [prefillAsset, setPrefillAsset] = useState(null);
 
   const fetchPortfolio = () => {
-    fetch("http://127.0.0.1:8000/api/portfolio/holdings/", { credentials: "include" })
+    fetch(`${API_URL}/api/portfolio/holdings/`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setPortfolio(data))
       .catch((err) => console.error(err));
   };
 
   const fetchAnalytics = () => {
-    fetch("http://127.0.0.1:8000/api/analytics/dashboard/", { credentials: "include" })
+    fetch(`${API_URL}/api/analytics/dashboard/`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setAnalytics(data))
       .catch((err) => console.error(err));

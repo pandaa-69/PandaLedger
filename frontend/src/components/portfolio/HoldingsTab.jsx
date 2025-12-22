@@ -32,19 +32,32 @@ const HoldingsTab = ({ portfolio, onAddClick, onAssetClick }) => {
                 <div className="text-5xl md:text-6xl font-black text-white tracking-tighter mb-8">
                 ₹{(portfolio.summary.total_value || 0).toLocaleString()}
                 </div>
+                
                 <div className="grid grid-cols-2 gap-4 max-w-md">
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Invested</div>
-                    <div className="text-lg font-bold text-white leading-none">₹{(portfolio.summary.total_invested || 0).toLocaleString()}</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Total P&L</div>
-                    <div className={`text-lg font-bold leading-none flex items-center gap-1 ${(portfolio.summary.total_profit || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {(portfolio.summary.total_profit || 0) >= 0 ? "+" : ""}₹{(portfolio.summary.total_profit || 0).toLocaleString()}
+                    {/* Invested Box */}
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Invested</div>
+                        <div className="text-lg font-bold text-white leading-none">₹{(portfolio.summary.total_invested || 0).toLocaleString()}</div>
+                    </div>
+                    
+                    {/* Total P&L Box (UPDATED) */}
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="text-[10px] uppercase text-gray-500 font-bold mb-1">Total P&L</div>
+                        <div className={`text-lg font-bold leading-none flex items-center gap-2 ${(portfolio.summary.total_profit || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {/* Amount */}
+                            <span>
+                                {(portfolio.summary.total_profit || 0) >= 0 ? "+" : ""}₹{(portfolio.summary.total_profit || 0).toLocaleString()}
+                            </span>
+                            
+                            {/* Percentage Pill */}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${ (portfolio.summary.total_profit || 0) >= 0 ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300" }`}>
+                                {portfolio.summary.total_profit_pct}%
+                            </span>
+                        </div>
                     </div>
                 </div>
-                </div>
             </div>
+            
             <button onClick={onAddClick} className="mt-8 w-full md:w-fit bg-white text-black px-10 py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-cyan-50 transition-all shadow-xl shadow-white/5">
                 <Plus size={20} /> Add Asset
             </button>

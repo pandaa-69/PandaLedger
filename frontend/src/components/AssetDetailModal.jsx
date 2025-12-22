@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Calendar, Trash2, Plus } from "lucide-react"; 
 import { getCookie } from "../utils/csrf";
+import API_URL from './config';
 
 const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => { 
   const [details, setDetails] = useState(null);
@@ -9,7 +10,7 @@ const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => {
   // FETCH DETAILS
   const fetchDetails = () => {
     setLoading(true);
-    fetch(`http://127.0.0.1:8000/api/portfolio/holdings/${asset.id}/`, {
+    fetch(`${API_URL}/api/portfolio/holdings/${asset.id}/`, {
       credentials: "include",
     })
       .then((res) => {
@@ -41,7 +42,7 @@ const AssetDetailModal = ({ asset, onClose, onAddMore, onUpdate }) => {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
 
     try {
-        const res = await fetch(`http://127.0.0.1:8000/api/portfolio/transaction/delete/${txId}/`, {
+        const res = await fetch(`${API_URL}/api/portfolio/transaction/delete/${txId}/`, {
             method: "DELETE",
             headers: { 
         "Content-Type": "application/json",

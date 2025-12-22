@@ -12,26 +12,45 @@ from django.contrib.auth.tokens import default_token_generator
 
 
 def signup_api(request):
-    if request.method=='POST':
-        data = json.loads(request.body)
-        User = get_user_model()
-
+    if request.method == 'POST':
         try:
-            # Creating the user using the Custom user model
+            data = json.loads(request.body)
+            User = get_user_model()
+            
+            username = data.get('username')
+            password = data.get('password')
+            email = data.get('email')
 
+            # 1. Validation: Ensure all fields are present
+            if not username or not password or not email:
+                return JsonResponse({'error': 'All fields (Username, Email, Password) are required.'}, status=400)
+
+            # 2. Validation: Check if email is already taken
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({'error': 'This email is already registered.'}, status=400)
+
+            # 3. Create User with Email
             user = User.objects.create_user(
-                username=data['username'],
-                password=data['password']
+                username=username,
+                email=email, # 👈 Save the email here
+                password=password
             )
+            
             return JsonResponse({
                 'message': 'User created succesfully',
                 'id': user.id
             })
+
         except IntegrityError:
-            return JsonResponse({
-                'error':'Username already taken'}, status = 400)
+            # This catches duplicate usernames
+            return JsonResponse({'error': 'Username already taken'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
     return JsonResponse({'error': 'GET method not allowed. Please use POST.'}, status=405)
-        
+
+
+
 
 def login_api(request):
     if request.method == 'POST':
@@ -66,12 +85,16 @@ def logout_api(request):
 
 
 
+# ... keep your imports ...
+from django.contrib.auth import get_user_model # Ensure this is imported
+
 @login_required
 def user_profile(request):
     """
-    GET: Returns user details (username, email, join date)
-    PUT: Updates email and password
+    GET: Returns user details
+    PUT: Updates email and password (with uniqueness check)
     """
+    # 1. GET Request (Display Data)
     if request.method == 'GET':
         return JsonResponse({
             "username": request.user.username,
@@ -79,25 +102,33 @@ def user_profile(request):
             "date_joined": request.user.date_joined.strftime("%b %d, %Y")
         })
 
+    # 2. PUT Request (Update Data)
     if request.method == 'PUT':
         try:
             data = json.loads(request.body)
             user = request.user
+            User = get_user_model() # 👈 THIS FIXED THE ERROR
             
-            # 1. Update Email
+            # --- EMAIL UPDATE LOGIC ---
             if 'email' in data:
-                user.email = data['email']
+                new_email = data['email']
+                
+                # Check if email is already taken by SOMEONE ELSE
+                if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+                    return JsonResponse({"error": "This email is already in use."}, status=400)
+                
+                user.email = new_email
             
-            # 2. Update Password (if provided)
+            # --- PASSWORD UPDATE LOGIC ---
             if 'new_password' in data and data['new_password']:
                 user.set_password(data['new_password'])
                 user.save()
-                # Important: This keeps the user logged in after password change
-                update_session_auth_hash(request, user) 
+                update_session_auth_hash(request, user) # Keep logged in
             else:
                 user.save()
                 
             return JsonResponse({"message": "Profile updated successfully!"})
+
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
             

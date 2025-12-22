@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { getCookie } from "../utils/csrf";
+import API_URL from './config';
 
 function AddExpenseForm() {
   // 1. MY STATE: This is where I keep track of what I'm typing right now.
@@ -32,7 +33,7 @@ function AddExpenseForm() {
     };
 
     // Sending the data to my Django API...
-    fetch("http://127.0.0.1:8000/api/expenses/add/", {
+    fetch(`${API_URL}/api/expenses/add/`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",

@@ -1,29 +1,34 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Loader2, UserPlus, Eye, EyeOff, Mail } from "lucide-react"; // Added Mail icon
 import { getCookie } from '../utils/csrf';
+import API_URL from './config';
 
 function Signup() {
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  // 1. Added 'email' to initial state
+  const [formData, setFormData] = useState({ username: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New State
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
 
-    fetch("http://127.0.0.1:8000/api/auth/signup/", {
+    fetch(`${API_URL}/api/auth/signup/`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "X-CSRFToken": getCookie('csrftoken')
       },
       body: JSON.stringify(formData),
-      credentials:"include"
+      credentials: "include"
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Signup failed");
+        if (!res.ok) {
+          // Try to extract the specific error message from backend
+          return res.json().then(data => { throw new Error(data.error || "Signup failed") });
+        }
         return res.json();
       })
       .then(() => {
@@ -31,7 +36,7 @@ function Signup() {
         navigate("/login");
       })
       .catch((err) => {
-        alert("Username likely taken. Try another.");
+        alert(err.message); // Show the specific error (like "Email taken")
         setLoading(false);
       });
   };
@@ -40,7 +45,6 @@ function Signup() {
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-400">
             <UserPlus size={24} />
@@ -49,8 +53,9 @@ function Signup() {
           <p className="text-sm text-gray-400">Join PandaLedger today.</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* USERNAME */}
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Choose Username
@@ -58,6 +63,7 @@ function Signup() {
             <input
               type="text"
               placeholder="Pick a unique name"
+              required
               className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
@@ -65,20 +71,40 @@ function Signup() {
             />
           </div>
 
+          {/* 👇 NEW: EMAIL INPUT */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Email Address
+            </label>
+            <div className="relative">
+                <input
+                type="email"
+                placeholder="you@example.com"
+                required
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600 pl-10" // added padding left for icon
+                onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                }
+                />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            </div>
+          </div>
+
+          {/* PASSWORD */}
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Choose Password
             </label>
             <div className="relative">
                 <input
-                type={showPassword ? "text" : "password"} // Dynamic Type
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
+                required
                 className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder-gray-600"
                 onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                 }
                 />
-                {/* 👁️ THE EYE TOGGLE BUTTON */}
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}

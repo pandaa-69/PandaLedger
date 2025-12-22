@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Edit2, Check, X } from 'lucide-react';
 import { getCookie } from '../../utils/csrf';
+import API_URL from './config';
 
 const BudgetCard = ({ onBudgetChange }) => {
     const [stats, setStats] = useState({ total_spent: 0, monthly_budget: 0, percentage: 0 });
@@ -9,7 +10,7 @@ const BudgetCard = ({ onBudgetChange }) => {
 
     const fetchStats = () => {
         // 👇 FIXED URL: Removed "ledger/"
-        fetch("http://127.0.0.1:8000/api/stats/", { credentials: "include" })
+        fetch(`${API_URL}/api/stats/`, { credentials: "include" })
             .then(res => res.json())
             .then(data => {
                 setStats(data);
@@ -22,7 +23,7 @@ const BudgetCard = ({ onBudgetChange }) => {
     // Handle Saving New Budget
     const handleSave = () => {
         // 👇 FIXED URL: Removed "ledger/"
-        fetch("http://127.0.0.1:8000/api/budget/update/", {
+        fetch(`${API_URL}/api/budget/update/`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",

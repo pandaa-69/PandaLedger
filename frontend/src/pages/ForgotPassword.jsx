@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Mail, ArrowLeft, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
+import API_URL from './config';
+
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
@@ -14,7 +16,7 @@ const ForgotPassword = () => {
         setLoading(true);
         
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/auth/reset-password/', {
+            const res = await fetch(`${API_URL}/api/auth/reset-password/`, {
                 method: 'POST',
                 headers: { 
                     "Content-Type": "application/json",

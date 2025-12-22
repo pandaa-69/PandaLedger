@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword'; 
 import ResetPasswordConfirm from './pages/ResetPasswordConfirm';
+import API_URL from './config';
 
 function App() {
   const [expenses, setExpenses] = useState(null);
@@ -24,10 +25,10 @@ function App() {
 
   // Keep your existing fetch logic!
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/auth/csrf/", { credentials: "include" })
+    fetch(`${API_URL}/api/auth/csrf/`, { credentials: "include" })
         .catch(err => console.log("CSRF Fetch Error:", err));
     
-    fetch("http://127.0.0.1:8000/api/expenses/", {
+    fetch(`${API_URL}/api/expenses/`, {
       method: "GET",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

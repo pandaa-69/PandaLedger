@@ -3,6 +3,7 @@ import MarketDashboard from "../components/MarketDashboard";
 import { Link } from "react-router-dom";
 import { ArrowRight, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 import WealthCalculator from "../components/WealthCalculator";
+import API_URL from './config';
 
 function Home() {
   const [summary, setSummary] = useState(null);
@@ -10,7 +11,7 @@ function Home() {
 
   useEffect(() => {
     // 1. Fetch the "Command Center" Data 📡
-    fetch("http://127.0.0.1:8000/api/analytics/home-summary/", {
+    fetch(`${API_URL}/api/analytics/home-summary/`, {
       credentials: "include",
     })
       .then((res) => {

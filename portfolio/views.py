@@ -6,6 +6,10 @@ import json
 import yfinance as yf
 from datetime import date
 from analytics.services.backfill import backfill_portfolio_history
+from django.utils import timezone
+from datetime import timedelta
+
+
 # --- HELPER: SMART ASSET DETECTION 🧠 ---
 def detect_asset_type(info, symbol, name):
     sType = info.get('quoteType', '').upper()
@@ -105,11 +109,70 @@ def search_asset(request):
     return JsonResponse(results, safe=False)
 
 # 2. GET PORTFOLIO (Updated to send Sector & Cap to Frontend)
+
+
+# --- HELPER: SMART BULK UPDATE (With Cooldown) ---
+def update_live_prices(holdings):
+    """
+    Checks timestamps. Only fetches from Yahoo if data is older than 10 minutes.
+    """
+    # 1. Identify which assets are "Stale" (Older than 10 mins)
+    cooldown_time = timezone.now() - timedelta(minutes=10)
+    
+    # Filter holdings where the asset hasn't been updated recently
+    assets_to_update = []
+    symbols_to_fetch = []
+
+    for h in holdings:
+        # If asset is new OR updated more than 10 mins ago
+        if h.asset.updated_at < cooldown_time:
+            assets_to_update.append(h.asset)
+            symbols_to_fetch.append(h.asset.symbol)
+
+    # 2. If everyone is fresh, DO NOTHING (Saves API calls!) 🛑
+    if not symbols_to_fetch:
+        print("✅ All assets are fresh (Cached). Skipping API call.")
+        return
+
+    print(f"🔄 Cache expired for {len(symbols_to_fetch)} assets. Fetching live...")
+    
+    try:
+        # 3. Fetch ONLY the stale symbols
+        tickers = yf.Tickers(" ".join(symbols_to_fetch))
+        
+        updated_count = 0
+        for asset in assets_to_update:
+            try:
+                latest_price = tickers.tickers[asset.symbol].fast_info.last_price
+                if latest_price and latest_price > 0:
+                    asset.last_price = latest_price
+                    asset.updated_at = timezone.now()
+                    updated_count += 1
+            except Exception as e:
+                print(f"⚠️ Failed {asset.symbol}: {e}")
+
+        # 4. Bulk Save (Updates 'updated_at' automatically)
+        if updated_count > 0:
+            Asset.objects.bulk_update(assets_to_update, ['last_price', 'updated_at']) # Explicitly update timestamp
+            print(f"✅ Updated {updated_count} assets from Yahoo.")
+            
+    except Exception as e:
+        print(f"❌ Batch update failed: {e}")
+
+
 @login_required
 def get_portfolio(request):
+    # 1. Get User's Holdings
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
-    data = []
     
+    # 2. 🔥 UPDATE PRICES BEFORE CALCULATING 🔥
+    # Only run this if user has holdings
+    if holdings.exists():
+        update_live_prices(holdings)
+        # Refresh holdings from DB to get the new prices we just saved
+        holdings = Holding.objects.filter(user=request.user).select_related('asset')
+
+    data = []
     total_value = 0
     total_invested = 0
     
@@ -124,11 +187,11 @@ def get_portfolio(request):
             "symbol": h.asset.symbol,
             "name": h.asset.name,
             "type": h.asset.asset_type,
-            "sector": h.asset.sector,               # 👈 NEW
-            "market_cap_category": h.asset.market_cap_category, # 👈 NEW
+            "sector": h.asset.sector,
+            "market_cap_category": h.asset.market_cap_category,
             "qty": float(h.quantity),
             "avg_price": float(h.avg_buy_price),
-            "current_price": float(h.asset.last_price),
+            "current_price": float(h.asset.last_price), # 👈 Now this is FRESH!
             "current_value": current_val,
             "invested_value": round(invested_val, 2),
             "profit": round(profit, 2),
@@ -137,13 +200,17 @@ def get_portfolio(request):
         
         total_value += current_val
         total_invested += invested_val
+        total_profit = total_value - total_invested
+
+        total_profit_pct = (total_profit/total_invested*100) if total_invested>0 else 0
 
     return JsonResponse({
         "holdings": data,
         "summary": {
             "total_value": round(total_value, 2),
             "total_invested": round(total_invested, 2),
-            "total_profit": round(total_value - total_invested, 2)
+            "total_profit": round(total_value - total_invested, 2),
+            "total_profit_pct":round(total_profit_pct, 2)
         }
     })
 

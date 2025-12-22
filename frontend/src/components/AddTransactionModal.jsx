@@ -22,7 +22,7 @@ const AddTransactionModal = ({ onClose, onSuccess, prefillAsset = null }) => {
         setLoading(true);
         const safetyTimer = setTimeout(() => setLoading(false), 5000);
 
-        fetch(`http://127.0.0.1:8000/api/portfolio/search/?q=${query}`, {
+        fetch(`${API_URL}/api/portfolio/search/?q=${query}`, {
           credentials: "include",
         })
           .then((res) => res.json())
@@ -52,7 +52,7 @@ const AddTransactionModal = ({ onClose, onSuccess, prefillAsset = null }) => {
     };
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/portfolio/transaction/add/", {
+      const res = await fetch(`${API_URL}/api/portfolio/transaction/add/`, {
         method: "POST",
         headers: { 
         "Content-Type": "application/json",

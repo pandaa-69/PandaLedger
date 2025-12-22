@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
+import API_URL from './config';
+
 const Profile = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState({ username: '', email: '' });
@@ -11,7 +13,7 @@ const Profile = () => {
 
     useEffect(() => {
         // Fetch current user details
-        fetch('http://127.0.0.1:8000/api/user/profile/', {
+        fetch(`${API_URL}/api/user/profile/`, {
             method:'GET',
             credentials:'include',
         })
@@ -32,10 +34,13 @@ const Profile = () => {
     }, [navigate]);
 
     const handleSave = async () => {
+
+        setMessage("");
+
         const payload = { email: user.email };
         if (passwords.new) payload.new_password = passwords.new;
-
-        const res = await fetch('http://127.0.0.1:8000/api/user/profile/', {
+        try{
+        const res = await fetch(`${API_URL}/api/user/profile/`, {
             method: 'PUT',
             headers: { 
                 "Content-Type": "application/json",
@@ -44,14 +49,19 @@ const Profile = () => {
             credentials:'include',
             body: JSON.stringify(payload)
         });
+
+        const data = await res.json();
         
         if (res.ok) {
             setMessage("✅ Settings Saved!");
             setPasswords({ new: '' }); // Clear password field
             setTimeout(() => setMessage(""), 3000);
         } else {
-            setMessage("❌ Error saving settings");
-        }
+            setMessage(`❌ ${data.error || "Error saving settings"}`)
+    } } catch(err){
+        console.error(err);
+        setMessage("❌ Netword Error");
+    }
     };
 
     if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
