@@ -9,8 +9,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Allow Vercel (for Proxy) and Render
-ALLOWED_HOSTS = ['pandaledger-api.onrender.com', 'panda-ledger.vercel.app', 'localhost', '127.0.0.1']
+# Allow Render backend and Vercel frontend domains
+ALLOWED_HOSTS = [
+    'pandaledger-api.onrender.com', 
+    'panda-ledger-frontend.vercel.app', 
+    'localhost', 
+    '127.0.0.1'
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -44,19 +49,19 @@ MIDDLEWARE = [
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# 1. CORS
+# 1. CORS: Allow the NEW Frontend Domain
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
-    "https://panda-ledger.vercel.app",
+    "https://panda-ledger-frontend.vercel.app", # <--- YOUR NEW URL
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
-# 2. CSRF
+# 2. CSRF: Trust the NEW Frontend Domain
 CSRF_TRUSTED_ORIGINS = [
-    "https://panda-ledger.vercel.app",
+    "https://panda-ledger-frontend.vercel.app", # <--- YOUR NEW URL
     "https://pandaledger-api.onrender.com",
     "http://localhost:5173",
 ]
