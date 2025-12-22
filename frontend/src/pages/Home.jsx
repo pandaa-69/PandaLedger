@@ -3,7 +3,7 @@ import MarketDashboard from "../components/MarketDashboard";
 import { Link } from "react-router-dom";
 import { ArrowRight, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 import WealthCalculator from "../components/WealthCalculator";
-import API_URL from './config';
+import API_URL from "../config";
 
 function Home() {
   const [summary, setSummary] = useState(null);

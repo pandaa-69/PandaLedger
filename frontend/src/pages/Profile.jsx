@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from '../config';
 
 const Profile = () => {
     const navigate = useNavigate();

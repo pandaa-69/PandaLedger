@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ArrowLeft, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from '../config';
 
 
 const ForgotPassword = () => {

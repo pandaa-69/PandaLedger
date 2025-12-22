@@ -3,7 +3,7 @@ import AddExpenseForm from "../components/AddExpenseForm";
 import BudgetCard from "../components/ledger/BudgetCard"; // 👈 Import the new component
 import { Trash2, Wallet, ArrowDownCircle } from "lucide-react";
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from "../config";
 
 function Ledger({ expenses, onTransactionUpdate }) { 
   

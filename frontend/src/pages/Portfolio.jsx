@@ -7,7 +7,7 @@ import AddTransactionModal from "../components/AddTransactionModal";
 import AssetDetailModal from "../components/AssetDetailModal";
 import HoldingsTab from "../components/portfolio/HoldingsTab";
 import AnalyticsTab from "../components/portfolio/AnalyticsTab";
-import API_URL from './config';
+import API_URL from "../config";
 
 const Portfolio = () => {
   const [portfolio, setPortfolio] = useState({ holdings: [], summary: {} });

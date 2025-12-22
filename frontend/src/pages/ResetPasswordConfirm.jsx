@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from '../config';
 
 const ResetPasswordConfirm = () => {
     const navigate = useNavigate();

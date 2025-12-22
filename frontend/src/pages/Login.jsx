@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from "../config";
 
 function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });

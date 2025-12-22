@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Loader2, UserPlus, Eye, EyeOff, Mail } from "lucide-react"; // Added Mail icon
 import { getCookie } from '../utils/csrf';
-import API_URL from './config';
+import API_URL from "../config";
 
 function Signup() {
   // 1. Added 'email' to initial state
