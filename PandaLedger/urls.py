@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path , include
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
+from portfolio.views import wake_up
 
 # Auto-create a superuser for Render Free Tier
 User = get_user_model()
@@ -31,6 +32,7 @@ except Exception:
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('wakeup/', wake_up, name = 'wakeup'),
     path('api/portfolio/', include('portfolio.urls')),
     path('api/', include('ledger.urls')),
     path('api/', include('core.urls')),

@@ -320,3 +320,8 @@ def seed_db_view(request):
         return HttpResponse("✅ Seed command executed successfully! Assets have been added to DB.")
     except Exception as e:
         return HttpResponse(f"❌ Error seeding DB: {str(e)}", status=500)
+    
+
+# 7. ROOT / WAKE UP VIEW
+def wake_up(request):
+    return HttpResponse("<h1>🐼 PandaLedger Backend is Awake!</h1><p>Status: Active</p>")
