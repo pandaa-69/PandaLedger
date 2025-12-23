@@ -12,6 +12,7 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 # Allow Render backend and Vercel frontend domains
 ALLOWED_HOSTS = [
     'pandaledger-api.onrender.com', 
+    'api.pandaledger.tech',
     'panda-ledger-frontend.vercel.app', 
     'localhost', 
     '127.0.0.1'
@@ -53,7 +54,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
-    "https://panda-ledger-frontend.vercel.app", # <--- YOUR NEW URL
+    "https://panda-ledger-frontend.vercel.app",
+    "https://pandaledger.tech", 
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
@@ -61,8 +63,11 @@ CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
 # 2. CSRF: Trust the NEW Frontend Domain
 CSRF_TRUSTED_ORIGINS = [
-    "https://panda-ledger-frontend.vercel.app", # <--- YOUR NEW URL
+    "https://panda-ledger-frontend.vercel.app",
+    "https://api.pandaledger.tech",
     "https://pandaledger-api.onrender.com",
+    "https://pandaledger.tech",
+    "https://www.pandaledger.tech",
     "http://localhost:5173",
 ]
 
