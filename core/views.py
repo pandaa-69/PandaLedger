@@ -9,6 +9,7 @@ from django.contrib.auth.forms import PasswordResetForm
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
+from .utils import send_email_async 
 
 @ensure_csrf_cookie
 def signup_api(request):
@@ -132,34 +133,50 @@ def user_profile(request):
 
 
 
+
 def request_password_reset(request):
     """
-    Takes an email, finds the user, and sends a reset link (to console).
+    Takes an email, finds the user, and sends a reset link ASYNCHRONOUSLY.
     """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             email = data.get('email')
-            
-            # Django Form handles the heavy lifting (finding user, generating token)
-            form = PasswordResetForm({'email': email})
-            if form.is_valid():
-                # This saves the email content to the console
-                form.save(
-                    request=request,
-                    use_https=False,
-                    from_email='support@pandaledger.com', 
-                    email_template_name='registration/password_reset_email.html',
-                    domain_override='127.0.0.1:5173'
-                )
+            User = get_user_model()
+
+            # 1. Find the user (Fail silently if not found for security)
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # We return success even if user doesn't exist so hackers can't fish for emails
                 return JsonResponse({"message": "If an account exists, a reset link has been sent."})
-            else:
-                return JsonResponse({"error": "Invalid email"}, status=400)
+
+            # 2. Generate the Token and UID manually
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            # 3. Construct the Link (Point to your Frontend Domain!)
+            # Note: Ensure this matches your React Route
+            reset_link = f"https://pandaledger.tech/reset-password/{uid}/{token}"
+
+            # 4. Prepare Email Data
+            email_data = {
+                'subject': "Reset Your PandaLedger Password",
+                'body': f"Hi {user.username},\n\nYou requested a password reset.\nClick the link below to set a new password:\n\n{reset_link}\n\nIf you didn't ask for this, please ignore this email.",
+                'to': user.email
+            }
+
+            # 5. Send Async (Instant Return) 🚀
+            send_email_async(email_data)
+
+            return JsonResponse({"message": "If an account exists, a reset link has been sent."})
                 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
             
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
 
 
 
