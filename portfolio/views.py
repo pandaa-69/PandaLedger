@@ -9,82 +9,48 @@ from datetime import date
 from analytics.services.backfill import backfill_portfolio_history
 from django.utils import timezone
 from datetime import timedelta
+import requests
 
-# --- HELPER: SMART ASSET DETECTION 🧠 ---
 def detect_asset_type(info, symbol, name):
     sType = info.get('quoteType', '').upper()
     name_upper = name.upper()
     symbol_upper = symbol.upper()
 
-    # 1. CRYPTO
-    if sType == 'CRYPTOCURRENCY' or '-USD' in symbol_upper:
-        return 'CRYPTO'
-    
-    # 2. REITs
-    if 'REIT' in name_upper or sType == 'REIT':
-        return 'REIT'
-
-    # 3. GOLD / SILVER
-    if 'GOLD' in name_upper or 'SILVER' in name_upper:
-        return 'GOLD'
-    
-    # 4. ETFs
-    if ('ETF' in name_upper or 
-        'BEES' in name_upper or 
-        'MON100' in symbol_upper or
-        sType == 'ETF'):
-        return 'ETF'
-    
-    # 5. MUTUAL FUNDS
-    if sType == 'MUTUALFUND' or 'FUND' in name_upper:
-        return 'MF'
-
-    # Default
+    if sType == 'CRYPTOCURRENCY' or '-USD' in symbol_upper: return 'CRYPTO'
+    if 'REIT' in name_upper or sType == 'REIT': return 'REIT'
+    if 'GOLD' in name_upper or 'SILVER' in name_upper: return 'GOLD'
+    if ('ETF' in name_upper or 'BEES' in name_upper or 'MON100' in symbol_upper or sType == 'ETF'): return 'ETF'
+    if sType == 'MUTUALFUND' or 'FUND' in name_upper: return 'MF'
     return 'STOCK'
 
 
-# 1. SEARCH API (Updated: Removed manual session to fix Crash)
+# 1. SEARCH API (Prioritizes DB for MFs)
 def search_asset(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
     query = request.GET.get('q', '').strip().upper()
-    if not query:
-        return JsonResponse([], safe=False)
+    if not query: return JsonResponse([], safe=False)
 
-    # 1. Local Search (Fast DB Check)
+    # 1. Local Search (This will now find the 40k seeded MFs!)
     assets = Asset.objects.filter(name__icontains=query) | Asset.objects.filter(symbol__icontains=query)
-    
-    # Convert DB assets to JSON results
-    results = [{"id": a.id, "symbol": a.symbol, "name": a.name, "type": a.asset_type, "price": float(a.last_price)} for a in assets[:5]]
+    # Increased limit to 10 to show more MF options
+    results = [{"id": a.id, "symbol": a.symbol, "name": a.name, "type": a.asset_type, "price": float(a.last_price)} for a in assets[:10]]
 
-    # 2. If DB has low results, ask Yahoo (The "Filler" Part)
+    # 2. If DB has low results (e.g. US Stocks), ask Yahoo
     if len(results) < 3 and len(query) > 2:
         try:
             yahoo_symbol = f"{query}.NS" if not ("-" in query or "." in query) else query
-            
-            # 🛠️ FIX: Removed 'session=session'. Let yfinance handle the browser faking.
             ticker = yf.Ticker(yahoo_symbol)
             
-            # Fetch Data
             try:
                 full_info = ticker.info
                 price = full_info.get('currentPrice') or full_info.get('regularMarketPreviousClose')
                 name = full_info.get('longName', query)
-                
-                # --- Get Insights ---
                 sector = full_info.get('sector', 'Other')
                 mcap = full_info.get('marketCap', 0)
-                
-                # Mcap Logic
-                mcap_cat = 'MID'
-                if mcap > 200000000000: 
-                    mcap_cat = 'LARGE'
-                elif mcap < 50000000000: 
-                    mcap_cat = 'SMALL'
-                
+                mcap_cat = 'LARGE' if mcap > 200000000000 else 'MID' if mcap > 50000000000 else 'SMALL'
             except:
-                # Fallback if .info fails
                 full_info = {}
                 price = ticker.fast_info.last_price
                 name = query
@@ -93,79 +59,79 @@ def search_asset(request):
 
             if price and price > 0:
                 detected_type = detect_asset_type(full_info, yahoo_symbol, name)
-                
-                # Create the asset in DB so next search is instant
                 new_asset = Asset.objects.create(
-                    symbol=yahoo_symbol,
-                    name=name,
-                    last_price=price,
-                    asset_type=detected_type,
-                    sector=sector,
-                    market_cap_category=mcap_cat
+                    symbol=yahoo_symbol, name=name, last_price=price,
+                    asset_type=detected_type, sector=sector, market_cap_category=mcap_cat
                 )
-                results.append({
-                    "id": new_asset.id, 
-                    "symbol": new_asset.symbol, 
-                    "name": new_asset.name, 
-                    "type": detected_type, 
-                    "price": price
-                })
+                results.append({"id": new_asset.id, "symbol": new_asset.symbol, "name": new_asset.name, "type": detected_type, "price": price})
         except Exception as e:
-            print(f"Yahoo Fetch Failed: {e}")
-            pass
+            pass # Yahoo failed, just return DB results
             
     return JsonResponse(results, safe=False)
 
 
-# --- HELPER: ROBUST UPDATE (Fixed: No Session) ---
+# --- HELPER: HYBRID UPDATE ENGINE (Yahoo + MFAPI) 🚀 ---
 def update_live_prices(holdings):
     """
-    Checks timestamps. Only fetches from Yahoo if data is older than 10 minutes OR price is 0.
+    Yahoo for Stocks/Crypto. MFAPI.in for Indian Mutual Funds.
     """
-    # 1. Identify which assets are "Stale"
     cooldown_time = timezone.now() - timedelta(minutes=10)
     
-    # Filter holdings where the asset hasn't been updated recently or has 0 price
-    assets_to_update = []
-    symbols_to_fetch = []
+    yahoo_assets = []
+    yahoo_symbols = []
+    mf_assets = []
 
     for h in holdings:
+        # Update if stale OR price is 0
         if h.asset.updated_at < cooldown_time or h.asset.last_price == 0:
-            assets_to_update.append(h.asset)
-            symbols_to_fetch.append(h.asset.symbol)
+            # 🕵️ DETECT: Is it a numeric code? (e.g., "118778") -> MFAPI
+            if h.asset.symbol.isdigit():
+                mf_assets.append(h.asset)
+            else:
+                yahoo_assets.append(h.asset)
+                yahoo_symbols.append(h.asset.symbol)
 
-    # 2. If everyone is fresh, DO NOTHING
-    if not symbols_to_fetch:
-        print("✅ All assets are fresh (Cached). Skipping API call.")
+    if not yahoo_assets and not mf_assets:
+        print("✅ All assets are fresh. Skipping.")
         return
 
-    print(f"🔄 Cache expired for {len(symbols_to_fetch)} assets. Fetching live...")
-    
-    try:
-        # 🛠️ FIX: Removed 'session=session'. Let yfinance handle it.
-        # Sending one bulk request
-        tickers = yf.Tickers(" ".join(symbols_to_fetch))
-        
-        updated_count = 0
-        for asset in assets_to_update:
+    print(f"🔄 Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI...")
+
+    # --- 1. YAHOO FINANCE BATCH FETCH ---
+    if yahoo_assets:
+        try:
+            tickers = yf.Tickers(" ".join(yahoo_symbols))
+            for asset in yahoo_assets:
+                try:
+                    latest_price = tickers.tickers[asset.symbol].fast_info.last_price
+                    if latest_price and latest_price > 0:
+                        asset.last_price = latest_price
+                        asset.updated_at = timezone.now()
+                except Exception as e:
+                    print(f"⚠️ Yahoo Failed {asset.symbol}: {e}")
+        except Exception as e:
+            print(f"❌ Yahoo Batch Failed: {e}")
+
+    # --- 2. MFAPI.IN FETCH ---
+    if mf_assets:
+        for asset in mf_assets:
             try:
-                # Accessing .tickers[symbol] is instant after the bulk init
-                latest_price = tickers.tickers[asset.symbol].fast_info.last_price
-                if latest_price and latest_price > 0:
-                    asset.last_price = latest_price
-                    asset.updated_at = timezone.now()
-                    updated_count += 1
+                response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}")
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('data'):
+                        latest_nav = float(data['data'][0]['nav']) # 0 is latest date
+                        asset.last_price = latest_nav
+                        asset.updated_at = timezone.now()
+                        print(f"✅ MFAPI Updated {asset.symbol}: ₹{latest_nav}")
             except Exception as e:
-                print(f"⚠️ Failed {asset.symbol}: {e}")
+                print(f"⚠️ MFAPI Failed {asset.symbol}: {e}")
 
-        # 4. Bulk Save (Updates 'updated_at' automatically)
-        if updated_count > 0:
-            Asset.objects.bulk_update(assets_to_update, ['last_price', 'updated_at']) 
-            print(f"✅ Updated {updated_count} assets from Yahoo.")
-            
-    except Exception as e:
-        print(f"❌ Batch update failed: {e}")
-
+    # --- 3. SAVE ALL UPDATES ---
+    all_updates = yahoo_assets + mf_assets
+    if all_updates:
+        Asset.objects.bulk_update(all_updates, ['last_price', 'updated_at'])
+        print(f"💾 Saved {len(all_updates)} prices to DB.")
 
 # 2. GET PORTFOLIO
 def get_portfolio(request):
@@ -325,3 +291,19 @@ def seed_db_view(request):
 # 7. ROOT / WAKE UP VIEW
 def wake_up(request):
     return HttpResponse("<h1>🐼 PandaLedger Backend is Awake!</h1><p>Status: Active</p>")
+
+# 6. 🔓 SECRET SEED TRIGGER (Updated to include MFs)
+def seed_db_view(request):
+    if not request.user.is_superuser: 
+        return HttpResponse("Unauthorized: Admins only.", status=403)
+    
+    try:
+        # Seed Standard Assets (Stocks, Crypto, Gold)
+        call_command('seed_assets') 
+        
+        # Seed Mutual Funds (The New Logic)
+        call_command('seed_mfs')
+        
+        return HttpResponse("✅ Database Seeded! Stocks & Mutual Funds are ready.")
+    except Exception as e:
+        return HttpResponse(f"❌ Error seeding DB: {str(e)}", status=500)
