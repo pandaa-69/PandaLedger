@@ -7,6 +7,8 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+# 🚨 CRITICAL: Ensure your local .env file has DEBUG=True
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Allow Render backend and Vercel frontend domains
@@ -46,9 +48,41 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- 🛡️ PRODUCTION SECURITY (PROXY MODE) ---
-SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# --- 🛡️ SMART SECURITY CONFIGURATION ---
+# This block automatically switches rules so you don't break Local OR Prod.
+
+if not DEBUG:
+    # 🌍 PRODUCTION (Render)
+    # Forces HTTPS and Secure Cookies. Required for Vercel Proxy.
+    SECURE_SSL_REDIRECT = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    
+    # "None" allows the cookie to be sent across domains (Vercel -> Render)
+    # This ONLY works if Secure=True.
+    CSRF_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SAMESITE = 'None'
+    
+    # Trust the Vercel Proxy forwarding
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # 💻 LOCALHOST (Laptop)
+    # Disables HTTPS enforcement so local dev doesn't crash.
+    SECURE_SSL_REDIRECT = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+    
+    # "Lax" is standard for localhost. It works WITHOUT Secure=True.
+    # If you leave this as 'None' locally, Chrome will block your login.
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Keep these standard (Global)
+CSRF_COOKIE_HTTPONLY = False 
+SESSION_COOKIE_HTTPONLY = True
+
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
 # 1. CORS: Allow the NEW Frontend Domain
 CORS_ALLOW_CREDENTIALS = True
@@ -56,6 +90,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://panda-ledger-frontend.vercel.app",
     "https://pandaledger.tech", 
+    "https://www.pandaledger.tech",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
@@ -69,22 +104,12 @@ CSRF_TRUSTED_ORIGINS = [
     "https://pandaledger.tech",
     "https://www.pandaledger.tech",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 # 3. CRITICAL: Allow Cookies on Vercel Domain
 CSRF_COOKIE_DOMAIN = None
 SESSION_COOKIE_DOMAIN = None
-
-# 4. Standard Security
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_HTTPONLY = False 
-SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SAMESITE = 'None'
-
-CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 ROOT_URLCONF = 'PandaLedger.urls'
