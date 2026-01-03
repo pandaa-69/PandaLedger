@@ -70,7 +70,7 @@ def search_asset(request):
     return JsonResponse(results, safe=False)
 
 
-# --- HELPER: HYBRID UPDATE ENGINE (Yahoo + MFAPI) 🚀 ---
+# HYBRID UPDATE ENGINE (Yahoo + MFAPI)---
 def update_live_prices(holdings):
     """
     Yahoo for Stocks/Crypto. MFAPI.in for Indian Mutual Funds.
@@ -84,7 +84,7 @@ def update_live_prices(holdings):
     for h in holdings:
         # Update if stale OR price is 0
         if h.asset.updated_at < cooldown_time or h.asset.last_price == 0:
-            # 🕵️ DETECT: Is it a numeric code? (e.g., "118778") -> MFAPI
+            # Is it a numeric code  if its like "118778"  MFAPI
             if h.asset.symbol.isdigit():
                 mf_assets.append(h.asset)
             else:
@@ -92,10 +92,10 @@ def update_live_prices(holdings):
                 yahoo_symbols.append(h.asset.symbol)
 
     if not yahoo_assets and not mf_assets:
-        print("✅ All assets are fresh. Skipping.")
+        print("All assets are fresh. Skipping.")
         return
 
-    print(f"🔄 Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI...")
+    print(f"Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI...")
 
     # --- 1. YAHOO FINANCE BATCH FETCH ---
     if yahoo_assets:
@@ -108,9 +108,9 @@ def update_live_prices(holdings):
                         asset.last_price = latest_price
                         asset.updated_at = timezone.now()
                 except Exception as e:
-                    print(f"⚠️ Yahoo Failed {asset.symbol}: {e}")
+                    print(f"Yahoo Failed {asset.symbol}: {e}")
         except Exception as e:
-            print(f"❌ Yahoo Batch Failed: {e}")
+            print(f"Yahoo Batch Failed: {e}")
 
     # --- 2. MFAPI.IN FETCH ---
     if mf_assets:
@@ -123,15 +123,15 @@ def update_live_prices(holdings):
                         latest_nav = float(data['data'][0]['nav']) # 0 is latest date
                         asset.last_price = latest_nav
                         asset.updated_at = timezone.now()
-                        print(f"✅ MFAPI Updated {asset.symbol}: ₹{latest_nav}")
+                        print(f"MFAPI Updated {asset.symbol}: ₹{latest_nav}")
             except Exception as e:
-                print(f"⚠️ MFAPI Failed {asset.symbol}: {e}")
+                print(f"MFAPI Failed {asset.symbol}: {e}")
 
     # --- 3. SAVE ALL UPDATES ---
     all_updates = yahoo_assets + mf_assets
     if all_updates:
         Asset.objects.bulk_update(all_updates, ['last_price', 'updated_at'])
-        print(f"💾 Saved {len(all_updates)} prices to DB.")
+        print(f"Saved {len(all_updates)} prices to DB.")
 
 # 2. GET PORTFOLIO
 def get_portfolio(request):
@@ -141,7 +141,7 @@ def get_portfolio(request):
     # 1. Get User's Holdings
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
     
-    # 2. 🔥 UPDATE PRICES BEFORE CALCULATING 🔥
+    # 2.UPDATE PRICES BEFORE CALCULATING 
     if holdings.exists():
         update_live_prices(holdings)
         # Refresh holdings from DB to get the new prices we just saved
@@ -276,7 +276,7 @@ def get_holding_details(request, asset_id):
         return JsonResponse({"error": "Holding not found"}, status=404)
 
 
-# 6. 🔓 SECRET SEED TRIGGER
+# 6 SEED TRIGGER so that i can trigger db with this to add the assest first time 
 def seed_db_view(request):
     if not request.user.is_superuser: 
         return HttpResponse("Unauthorized: Admins only.", status=403)
