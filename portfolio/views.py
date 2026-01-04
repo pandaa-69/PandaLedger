@@ -96,7 +96,7 @@ def update_live_prices(holdings):
     Yahoo for Stocks/Crypto (Batch) + MFAPI for Mutual Funds (Parallel Threads)
     """
     now =timezone.now()
-    stock_cooldown_time = now - timedelta(seconds=10)
+    stock_cooldown_time = now - timedelta(minutes=5)
     mf_cooldown_time = now - timedelta(hours=21)
     
     yahoo_assets = []
