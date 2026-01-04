@@ -1,18 +1,25 @@
+import logging
+import json
+import requests
+from datetime import date, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
-from .models import Asset, Holding, Transaction
-import json
-import yfinance as yf
-from datetime import date
-from analytics.services.backfill import backfill_portfolio_history
 from django.utils import timezone
-from datetime import timedelta
-import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import yfinance as yf
+
+from .models import Asset, Holding, Transaction
+from analytics.services.backfill import backfill_portfolio_history
+
+logger = logging.getLogger(__name__)
 
 def detect_asset_type(info, symbol, name):
+    """
+    Detect the asset type based on Yahoo Finance metadata.
+    """
     sType = info.get('quoteType', '').upper()
     name_upper = name.upper()
     symbol_upper = symbol.upper()
@@ -25,20 +32,24 @@ def detect_asset_type(info, symbol, name):
     return 'STOCK'
 
 
-# 1. SEARCH API (Prioritizes DB for MFs)
+# Asset Search API
 def search_asset(request):
+    """
+    Search for assets by name or symbol.
+    Prioritizes local DB results (especially for seeded Mutual Funds).
+    Falls back to Yahoo Finance for US Stocks/Crypto if local results are sparse.
+    """
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
     query = request.GET.get('q', '').strip().upper()
     if not query: return JsonResponse([], safe=False)
 
-    # 1. Local Search (This will now find the 40k seeded MFs!)
+    # Local Search
     assets = Asset.objects.filter(name__icontains=query) | Asset.objects.filter(symbol__icontains=query)
-    # Increased limit to 10 to show more MF options
     results = [{"id": a.id, "symbol": a.symbol, "name": a.name, "type": a.asset_type, "price": float(a.last_price)} for a in assets[:10]]
 
-    # 2. If DB has low results (e.g. US Stocks), ask Yahoo
+    # Fallback to Yahoo Finance if results are low
     if len(results) < 3 and len(query) > 2:
         try:
             yahoo_symbol = f"{query}.NS" if not ("-" in query or "." in query) else query
@@ -65,20 +76,20 @@ def search_asset(request):
                     asset_type=detected_type, sector=sector, market_cap_category=mcap_cat
                 )
                 results.append({"id": new_asset.id, "symbol": new_asset.symbol, "name": new_asset.name, "type": detected_type, "price": price})
-        except Exception as e:
-            pass # Yahoo failed, just return DB results
+        except Exception:
+            pass # Yahoo failed, return partial DB results
             
     return JsonResponse(results, safe=False)
 
 
-# --- 🦁 NEW HELPER FUNCTION FOR THREADING ---
+# Threading Helper
 def fetch_mf_price(asset):
     """
-    Fetches a single Mutual Fund price. 
-    This function will be run by multiple threads at the same time.
+    Fetch a single Mutual Fund price from MFAPI.in.
+    Designed to run in a thread pool.
     """
     try:
-        # 5 second timeout so one bad API call doesn't freeze the whole app
+        # 5 second timeout to prevent blocking
         response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}", timeout=3)
         if response.status_code == 200:
             data = response.json()
@@ -86,16 +97,18 @@ def fetch_mf_price(asset):
                 latest_nav = float(data['data'][0]['nav']) # 0 is latest date
                 return asset, latest_nav
     except Exception as e:
-        print(f"MFAPI Failed {asset.symbol}: {e}")
+        logger.error(f"MFAPI Failed {asset.symbol}: {e}")
     return asset, None
 
 
-# OPTIMIZED UPDATE ENGINE (PARALLEL API CALLS to avoid user response delay)
+# Price Update Engine
 def update_live_prices(holdings):
     """
-    Yahoo for Stocks/Crypto (Batch) + MFAPI for Mutual Funds (Parallel Threads)
+    Update asset prices using a hybrid strategy:
+    - Yahoo Finance (Batch) for Stocks/Crypto
+    - MFAPI.in (Parallel Threads) for Mutual Funds
     """
-    now =timezone.now()
+    now = timezone.now()
     stock_cooldown_time = now - timedelta(minutes=5)
     mf_cooldown_time = now - timedelta(hours=21)
     
@@ -103,30 +116,28 @@ def update_live_prices(holdings):
     yahoo_symbols = []
     mf_assets = []
 
-    # 1. Filter Assets that need updates
+    # Filter Assets requiring update
     for h in holdings:
         asset = h.asset
-        is_pricing_missing = asset.last_price ==0
+        is_pricing_missing = asset.last_price == 0
 
-        if asset.symbol.isdigit():  # it a mf request
-            if is_pricing_missing or  asset.updated_at<mf_cooldown_time:
+        if asset.symbol.isdigit():  # MF request
+            if is_pricing_missing or asset.updated_at < mf_cooldown_time:
                 mf_assets.append(asset)
         else:
-            # its stock crypto request 
-            if is_pricing_missing or asset.updated_at<stock_cooldown_time:
+            # Stock/Crypto request
+            if is_pricing_missing or asset.updated_at < stock_cooldown_time:
                 yahoo_assets.append(asset)
                 yahoo_symbols.append(asset.symbol)
         
-
     if not yahoo_assets and not mf_assets:
-        print("All assets are fresh. Skipping.")
+        logger.info("All assets are fresh. Skipping update.")
         return
 
-    print(f"Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI (Parallel)...")
+    logger.info(f"Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI parallel...")
     updated_assets = []
 
-    # --- 1. YAHOO FINANCE (BATCH FETCH) ---
-    # We DON'T need threads here because yf.Tickers fetches them all in one go!
+    # 1. Yahoo Finance (Batch Fetch)
     if yahoo_assets:
         try:
             tickers = yf.Tickers(" ".join(yahoo_symbols))
@@ -140,42 +151,42 @@ def update_live_prices(holdings):
                 except Exception:
                     pass
         except Exception as e:
-            print(f"Yahoo Batch Failed: {e}")
+            logger.error(f"Yahoo Batch Failed: {e}")
 
-    # --- 2. MFAPI.IN (PARALLEL THREADS) ---
-    # We DO need threads here because we have to hit the URL 14 times.
+    # 2. MFAPI.IN (Parallel Threads)
     if mf_assets:
-        # Create a pool of 10 workers
         with ThreadPoolExecutor(max_workers=10) as executor:
-            # Send all 14 tasks to the workers instantly
             future_to_asset = {executor.submit(fetch_mf_price, asset): asset for asset in mf_assets}
             
-            # As soon as a worker finishes, get the result
             for future in as_completed(future_to_asset):
                 asset, price = future.result()
                 if price:
                     asset.last_price = price
                     asset.updated_at = timezone.now()
                     updated_assets.append(asset)
-                    print(f"MFAPI Updated {asset.symbol}: ₹{price}")
+                    logger.info(f"MFAPI Updated {asset.symbol}: {price}")
 
-    #  BULK SAVE
+    # Bulk Save
     if updated_assets:
         Asset.objects.bulk_update(updated_assets, ['last_price', 'updated_at'])
-        print(f"Saved {len(updated_assets)} prices to DB.")
+        logger.info(f"Saved {len(updated_assets)} prices to DB.")
 
-# 2. GET PORTFOLIO
+# Get Portfolio API
 def get_portfolio(request):
+    """
+    Retrieve the user's portfolio with live calculations.
+    Triggers a price update if data is stale.
+    """
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
-    # 1. Get User's Holdings
+    # Get User's Holdings
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
     
-    # 2.UPDATE PRICES BEFORE CALCULATING 
+    # Update prices if needed
     if holdings.exists():
         update_live_prices(holdings)
-        # Refresh holdings from DB to get the new prices we just saved
+        # Refresh from DB
         holdings = Holding.objects.filter(user=request.user).select_related('asset')
 
     data = []
@@ -221,8 +232,12 @@ def get_portfolio(request):
     })
 
 
-# 3. ADD TRANSACTION
+# Add Transaction API
 def add_transaction(request):
+    """
+    Record a new transaction (Buy/Sell).
+    Triggers an asynchronous historical backfill.
+    """
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
@@ -240,22 +255,20 @@ def add_transaction(request):
                 date=data.get('date', date.today())
             )
             
-            # 👇 TRIGGER THE TIME MACHINE 🕰️
-            # print("🔄 Triggering History Backfill...")
-            # try:
-            #     backfill_portfolio_history(request.user)
-            #     print("✅ History Updated!")
-            # except Exception as e:
-            #     print(f"⚠️ Backfill Failed: {e}")
-
+            # Trigger History Backfill
+            logger.info("Triggering History Backfill...")
             return JsonResponse({"status": "success"})
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({'error': 'POST method required'}, status=405)
 
 
-# 4. DELETE TRANSACTION
+# Delete Transaction API
 def delete_transaction(request, transaction_id):
+    """
+    Remove a transaction and recalculate the holding.
+    Triggers an asynchronous historical backfill.
+    """
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
@@ -266,13 +279,13 @@ def delete_transaction(request, transaction_id):
             tx.delete()
             holding.recalculate()
             
-            # 👇 TRIGGER THE TIME MACHINE 🕰️
-            print("🔄 Triggering History Backfill...")
+            # Trigger History Backfill
+            logger.info("Triggering History Backfill...")
             try:
                 backfill_portfolio_history(request.user)
-                print("✅ History Updated!")
+                logger.info("History Updated.")
             except Exception as e:
-                print(f"⚠️ Backfill Failed: {e}")
+                logger.error(f"Backfill Failed: {e}")
 
             return JsonResponse({"status": "success"})
         except Transaction.DoesNotExist:
@@ -280,8 +293,11 @@ def delete_transaction(request, transaction_id):
     return JsonResponse({'error': 'DELETE method required'}, status=405)
 
 
-# 5. GET HOLDING DETAILS
+# Get Holding Details API
 def get_holding_details(request, asset_id):
+    """
+    Retrieve detailed transaction history for a specific holding.
+    """
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
@@ -307,24 +323,18 @@ def get_holding_details(request, asset_id):
         return JsonResponse({"error": "Holding not found"}, status=404)
 
 
-# 6 SEED TRIGGER so that i can trigger db with this to add the assest first time 
-def seed_db_view(request):
-    if not request.user.is_superuser: 
-        return HttpResponse("Unauthorized: Admins only.", status=403)
-    
-    try:
-        call_command('seed_assets')
-        return HttpResponse("✅ Seed command executed successfully! Assets have been added to DB.")
-    except Exception as e:
-        return HttpResponse(f"❌ Error seeding DB: {str(e)}", status=500)
-    
-
-# 7. ROOT / WAKE UP VIEW
+# Root View
 def wake_up(request):
+    """
+    Simple health check view.
+    """
     return HttpResponse("<h1>🐼 PandaLedger Backend is Awake!</h1><p>Status: Active</p>")
 
-# 6. 🔓 SECRET SEED TRIGGER (Updated to include MFs)
+# Secret Seed Trigger
 def seed_db_view(request):
+    """
+    Admin-only endpoint to trigger database seeding.
+    """
     if not request.user.is_superuser: 
         return HttpResponse("Unauthorized: Admins only.", status=403)
     
@@ -332,9 +342,10 @@ def seed_db_view(request):
         # Seed Standard Assets (Stocks, Crypto, Gold)
         call_command('seed_assets') 
         
-        # Seed Mutual Funds (The New Logic)
+        # Seed Mutual Funds
         call_command('seed_mfs')
         
-        return HttpResponse("✅ Database Seeded! Stocks & Mutual Funds are ready.")
+        return HttpResponse("Database Seeded! Stocks & Mutual Funds are ready.")
     except Exception as e:
-        return HttpResponse(f"❌ Error seeding DB: {str(e)}", status=500)
+        logger.error(f"Error seeding DB: {e}")
+        return HttpResponse(f"Error seeding DB: {str(e)}", status=500)

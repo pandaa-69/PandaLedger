@@ -2,14 +2,14 @@ from django.core.management.base import BaseCommand
 from portfolio.models import Asset
 
 class Command(BaseCommand):
-    help = 'Safely seeds the DB with 300+ Top Assets (Metadata only, no Yahoo bans)'
+    help = 'Safely seeds the DB with 300+ Top Assets (Metadata only).'
 
     def handle(self, *args, **kwargs):
-        self.stdout.write("🌱 Starting MASSIVE Asset Seeding...")
+        self.stdout.write("Starting massive asset seeding...")
 
         ASSETS = [
             # ==========================================
-            # 🇮🇳 POPULAR ETFs (The "BEES" Family)
+            # Popular Indian ETFs (Nippon/Motilal Oswal)
             # ==========================================
             ("NIFTYBEES.NS", "Nippon India Nifty 50 Bees ETF", "ETF"),
             ("BANKBEES.NS", "Nippon India ETF Bank BeES", "ETF"),
@@ -29,7 +29,7 @@ class Command(BaseCommand):
             ("HNGSNGBEES.NS", "Nippon India ETF Hang Seng BeES", "ETF"),
 
             # ==========================================
-            # 🏢 NIFTY 50 (The Titans)
+            # NIFTY 50 Stocks
             # ==========================================
             ("RELIANCE.NS", "Reliance Industries Ltd", "STOCK"),
             ("TCS.NS", "Tata Consultancy Services", "STOCK"),
@@ -84,7 +84,7 @@ class Command(BaseCommand):
             ("INDUSINDBK.NS", "IndusInd Bank", "STOCK"),
 
             # ==========================================
-            # 🚀 MIDCAPS & TRENDING (The Growth Engines)
+            # Midcaps & Trending Stocks
             # ==========================================
             ("ZOMATO.NS", "Zomato Ltd", "STOCK"),
             ("JIOFIN.NS", "Jio Financial Services", "STOCK"),
@@ -153,7 +153,7 @@ class Command(BaseCommand):
             ("MPHASIS.NS", "Mphasis", "STOCK"),
             
             # ==========================================
-            # 🌎 US TECH (Indians love these)
+            # US Tech Stocks
             # ==========================================
             ("AAPL", "Apple Inc", "STOCK"),
             ("MSFT", "Microsoft Corp", "STOCK"),
@@ -180,7 +180,7 @@ class Command(BaseCommand):
             ("JPM", "JPMorgan Chase", "STOCK"),
             
             # ==========================================
-            # 🪙 CRYPTO (Top 20)
+            # Top 20 Cryptocurrencies
             # ==========================================
             ("BTC-USD", "Bitcoin", "CRYPTO"),
             ("ETH-USD", "Ethereum", "CRYPTO"),
@@ -202,7 +202,7 @@ class Command(BaseCommand):
             ("XMR-USD", "Monero", "CRYPTO"),
             
             # ==========================================
-            # 💰 MUTUAL FUNDS (Direct Growth)
+            # Direct Growth Mutual Funds
             # ==========================================
             ("0P0000XW8F.BO", "Parag Parikh Flexi Cap Fund", "MF"),
             ("0P00005V13.BO", "SBI Bluechip Fund", "MF"),
@@ -220,16 +220,16 @@ class Command(BaseCommand):
         added = 0
         skipped = 0
 
-        # ⚡ THE FAST SEED LOOP (No API calls)
+        # Fast seed loop (No API calls)
         for symbol, name, cat in ASSETS:
-            # get_or_create checks DB first. If missing, it creates it with defaults.
+            # Check DB first. If missing, create with defaults.
             obj, created = Asset.objects.get_or_create(
                 symbol=symbol,
                 defaults={
                     'name': name,
                     'asset_type': cat,
-                    'last_price': 0.0, # <--- 0.0 ensures we don't block on network
-                    'market_cap_category': 'MID', # Default, will update later
+                    'last_price': 0.0, # 0.0 ensures we don't block on network
+                    'market_cap_category': 'MID', # Default, update later
                     'sector': 'Unknown'
                 }
             )
@@ -238,4 +238,4 @@ class Command(BaseCommand):
             else:
                 skipped += 1
 
-        self.stdout.write(self.style.SUCCESS(f"🚀 DONE! Added {added} new assets. Skipped {skipped} existing."))
+        self.stdout.write(self.style.SUCCESS(f"Done. Added {added} new assets. Skipped {skipped} existing."))

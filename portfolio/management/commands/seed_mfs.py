@@ -7,7 +7,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         url = "https://api.mfapi.in/mf"
-        self.stdout.write(f"🌍 Fetching Master List from {url}...")
+        self.stdout.write(f"Fetching Master List from {url}...")
         
         try:
             response = requests.get(url)
@@ -17,7 +17,7 @@ class Command(BaseCommand):
             
             data = response.json()
             total_schemes = len(data)
-            self.stdout.write(f"📦 Found {total_schemes} schemes. preparing to seed...")
+            self.stdout.write(f"Found {total_schemes} schemes. Preparing to seed...")
 
             # Prepare objects for Bulk Create
             assets_to_create = []
@@ -28,12 +28,12 @@ class Command(BaseCommand):
                 code = str(scheme['schemeCode'])
                 name = scheme['schemeName']
 
-                # optimization: Skip if already exists
+                # Optimization: Skip if symbol already exists
                 if code in existing_symbols:
                     continue
 
-                # Filter: Let's focus on "Growth" and "Direct" plans to reduce noise 
-                # (Optional: Remove this 'if' to seed EVERYTHING)
+                # Filter: Focus on "Growth" and "Direct" plans to reduce noise
+                # (Optional: Remove this condition to seed all funds)
                 # if 'Growth' not in name: continue 
 
                 assets_to_create.append(
@@ -50,11 +50,11 @@ class Command(BaseCommand):
 
             # Bulk Create (Batches of 5000)
             if assets_to_create:
-                self.stdout.write(f"🚀 Inserting {len(assets_to_create)} new Mutual Funds...")
+                self.stdout.write(f"Inserting {len(assets_to_create)} new Mutual Funds...")
                 Asset.objects.bulk_create(assets_to_create, batch_size=5000, ignore_conflicts=True)
-                self.stdout.write(self.style.SUCCESS(f"✅ Successfully seeded {len(assets_to_create)} Mutual Funds!"))
+                self.stdout.write(self.style.SUCCESS(f"Successfully seeded {len(assets_to_create)} Mutual Funds."))
             else:
-                self.stdout.write(self.style.WARNING("⚠️ No new funds to add."))
+                self.stdout.write(self.style.WARNING("No new funds to add."))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ Error: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"Error: {str(e)}"))

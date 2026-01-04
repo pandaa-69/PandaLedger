@@ -3,10 +3,14 @@ from django.conf import settings
 from decimal import Decimal
 
 class Asset(models.Model):
+    """
+    Represents a financial instrument tracked by the system.
+    Supports various asset types including Stocks, Mutual Funds, and Crypto.
+    """
     ASSET_TYPES = [
         ('STOCK', 'Stock'),
         ('MF', 'Mutual Fund'),
-        ('ETF', 'ETF'),          # 👈 NEW: Added ETF Support
+        ('ETF', 'ETF'),
         ('CRYPTO', 'Crypto'),
         ('GOLD', 'Gold/Silver'),
         ('REIT', 'REIT'),
@@ -26,15 +30,24 @@ class Asset(models.Model):
         return f"{self.name} ({self.symbol})"
 
 class Holding(models.Model):
+    """
+    Represents a user's ownership of a specific asset.
+    Tracks the total quantity and the average buy price derived from transactions.
+    """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="holdings")
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     quantity = models.DecimalField(max_digits=15, decimal_places=4, default=0)
     avg_buy_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
     def current_value(self):
+        """Calculate the current market value of the holding."""
         return round(float(self.quantity * self.asset.last_price), 2)
 
     def recalculate(self):
+        """
+        Recalculate the quantity and average buy price based on all transactions.
+        If the total quantity drops to zero or less, the holding is removed.
+        """
         txs = self.transactions.all()
         total_qty = Decimal(0)
         total_cost = Decimal(0)
@@ -46,7 +59,7 @@ class Holding(models.Model):
             elif tx.type == 'SELL':
                 total_qty -= tx.quantity
         
-        # 👇 NEW: If Quantity is 0, DELETE the holding entirely!
+        # If Quantity is 0, delete the holding entirely to keep the portfolio clean.
         if total_qty <= 0:
             self.delete()
         else:
@@ -58,6 +71,10 @@ class Holding(models.Model):
         return f"{self.user.username} - {self.asset.symbol}"
 
 class Transaction(models.Model):
+    """
+    Represents a buy or sell action on a holding.
+    Triggers a recalculation of the parent holding upon save.
+    """
     TX_TYPES = [('BUY', 'Buy'), ('SELL', 'Sell')]
     holding = models.ForeignKey(Holding, on_delete=models.CASCADE, related_name="transactions")
     type = models.CharField(max_length=4, choices=TX_TYPES)
