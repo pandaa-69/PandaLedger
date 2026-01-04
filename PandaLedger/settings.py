@@ -8,7 +8,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# I set DEBUG based on the environment to ensure security in production.
+# Set DEBUG based on the environment to ensure security in production.
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Allow Render backend and Vercel frontend domains
@@ -48,15 +48,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# I configure security settings dynamically. 
-# In production, I enforce SSL and secure cookies. Locally, I keep it relaxed for development.
+# Configure security settings dynamically. 
+# In production, enforce SSL and secure cookies. Locally, keep it relaxed for development.
 if not DEBUG:
     # Production: Enforce HTTPS and secure cookies for Render/Vercel.
     SECURE_SSL_REDIRECT = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     
-    # I allow cross-domain cookies for Vercel -> Render communication.
+    # Allow cross-domain cookies for Vercel -> Render communication.
     CSRF_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SAMESITE = 'None'
     
@@ -79,7 +79,7 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
-# CORS: I explicitly allow the frontend domain.
+# CORS: Explicitly allow the frontend domain.
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
@@ -91,7 +91,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
-# CSRF: I trust the frontend domain for cross-site requests.
+# CSRF: Trust the frontend domain for cross-site requests.
 CSRF_TRUSTED_ORIGINS = [
     "https://panda-ledger-frontend.vercel.app",
     "https://api.pandaledger.tech",
@@ -102,7 +102,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-# I unset cookie domains to aid Vercel integration.
+# Unset cookie domains to aid Vercel integration.
 CSRF_COOKIE_DOMAIN = None
 SESSION_COOKIE_DOMAIN = None
 

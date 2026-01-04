@@ -6,12 +6,12 @@ from django.contrib.auth import get_user_model
 from dotenv import load_dotenv
 from portfolio.views import wake_up
 
-# I load the .env file here to ensure environment variables are present before the app boots.
+# Load the .env file here to ensure environment variables are present before the app boots.
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# I auto-provision a superuser if the credentials are in the environment.
+# Auto-provision a superuser if the credentials are in the environment.
 # This makes cold-starts on new deployments seamless.
 User = get_user_model()
 try:
