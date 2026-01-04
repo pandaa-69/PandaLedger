@@ -17,7 +17,7 @@ def backfill_portfolio_history(user):
 
     # 2. Determine Time Range
     start_date = txs[0].date
-    min_date = date.today() - timedelta(days=365 * 15) # Safety cap
+    min_date = date.today() - timedelta(days=365 * 30) # Safety cap
     if start_date < min_date:
         start_date = min_date
     end_date = date.today()
@@ -49,7 +49,7 @@ def backfill_portfolio_history(user):
     if yahoo_symbols:
         try:
             # Download close prices
-            yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False)['Close']
+            yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False, auto_adjust=True)['Close']
             
             # Normalize YF data structure (Series -> DataFrame if single asset)
             if isinstance(yf_data, pd.Series):

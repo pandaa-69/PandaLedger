@@ -10,6 +10,7 @@ from analytics.services.backfill import backfill_portfolio_history
 from django.utils import timezone
 from datetime import timedelta
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def detect_asset_type(info, symbol, name):
     sType = info.get('quoteType', '').upper()
@@ -70,34 +71,62 @@ def search_asset(request):
     return JsonResponse(results, safe=False)
 
 
-# HYBRID UPDATE ENGINE (Yahoo + MFAPI)---
+# --- 🦁 NEW HELPER FUNCTION FOR THREADING ---
+def fetch_mf_price(asset):
+    """
+    Fetches a single Mutual Fund price. 
+    This function will be run by multiple threads at the same time.
+    """
+    try:
+        # 5 second timeout so one bad API call doesn't freeze the whole app
+        response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}", timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('data'):
+                latest_nav = float(data['data'][0]['nav']) # 0 is latest date
+                return asset, latest_nav
+    except Exception as e:
+        print(f"MFAPI Failed {asset.symbol}: {e}")
+    return asset, None
+
+
+# OPTIMIZED UPDATE ENGINE (PARALLEL API CALLS to avoid user response delay)
 def update_live_prices(holdings):
     """
-    Yahoo for Stocks/Crypto. MFAPI.in for Indian Mutual Funds.
+    Yahoo for Stocks/Crypto (Batch) + MFAPI for Mutual Funds (Parallel Threads)
     """
-    cooldown_time = timezone.now() - timedelta(minutes=10)
+    now =timezone.now()
+    stock_cooldown_time = now - timedelta(seconds=10)
+    mf_cooldown_time = now - timedelta(hours=21)
     
     yahoo_assets = []
     yahoo_symbols = []
     mf_assets = []
 
+    # 1. Filter Assets that need updates
     for h in holdings:
-        # Update if stale OR price is 0
-        if h.asset.updated_at < cooldown_time or h.asset.last_price == 0:
-            # Is it a numeric code  if its like "118778"  MFAPI
-            if h.asset.symbol.isdigit():
-                mf_assets.append(h.asset)
-            else:
-                yahoo_assets.append(h.asset)
-                yahoo_symbols.append(h.asset.symbol)
+        asset = h.asset
+        is_pricing_missing = asset.last_price ==0
+
+        if asset.symbol.isdigit():  # it a mf request
+            if is_pricing_missing or  asset.updated_at<mf_cooldown_time:
+                mf_assets.append(asset)
+        else:
+            # its stock crypto request 
+            if is_pricing_missing or asset.updated_at<stock_cooldown_time:
+                yahoo_assets.append(asset)
+                yahoo_symbols.append(asset.symbol)
+        
 
     if not yahoo_assets and not mf_assets:
         print("All assets are fresh. Skipping.")
         return
 
-    print(f"Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI...")
+    print(f"Updating: {len(yahoo_assets)} via Yahoo, {len(mf_assets)} via MFAPI (Parallel)...")
+    updated_assets = []
 
-    # --- 1. YAHOO FINANCE BATCH FETCH ---
+    # --- 1. YAHOO FINANCE (BATCH FETCH) ---
+    # We DON'T need threads here because yf.Tickers fetches them all in one go!
     if yahoo_assets:
         try:
             tickers = yf.Tickers(" ".join(yahoo_symbols))
@@ -107,31 +136,33 @@ def update_live_prices(holdings):
                     if latest_price and latest_price > 0:
                         asset.last_price = latest_price
                         asset.updated_at = timezone.now()
-                except Exception as e:
-                    print(f"Yahoo Failed {asset.symbol}: {e}")
+                        updated_assets.append(asset)
+                except Exception:
+                    pass
         except Exception as e:
             print(f"Yahoo Batch Failed: {e}")
 
-    # --- 2. MFAPI.IN FETCH ---
+    # --- 2. MFAPI.IN (PARALLEL THREADS) ---
+    # We DO need threads here because we have to hit the URL 14 times.
     if mf_assets:
-        for asset in mf_assets:
-            try:
-                response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}")
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('data'):
-                        latest_nav = float(data['data'][0]['nav']) # 0 is latest date
-                        asset.last_price = latest_nav
-                        asset.updated_at = timezone.now()
-                        print(f"MFAPI Updated {asset.symbol}: ₹{latest_nav}")
-            except Exception as e:
-                print(f"MFAPI Failed {asset.symbol}: {e}")
+        # Create a pool of 10 workers
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            # Send all 14 tasks to the workers instantly
+            future_to_asset = {executor.submit(fetch_mf_price, asset): asset for asset in mf_assets}
+            
+            # As soon as a worker finishes, get the result
+            for future in as_completed(future_to_asset):
+                asset, price = future.result()
+                if price:
+                    asset.last_price = price
+                    asset.updated_at = timezone.now()
+                    updated_assets.append(asset)
+                    print(f"MFAPI Updated {asset.symbol}: ₹{price}")
 
-    # --- 3. SAVE ALL UPDATES ---
-    all_updates = yahoo_assets + mf_assets
-    if all_updates:
-        Asset.objects.bulk_update(all_updates, ['last_price', 'updated_at'])
-        print(f"Saved {len(all_updates)} prices to DB.")
+    #  BULK SAVE
+    if updated_assets:
+        Asset.objects.bulk_update(updated_assets, ['last_price', 'updated_at'])
+        print(f"Saved {len(updated_assets)} prices to DB.")
 
 # 2. GET PORTFOLIO
 def get_portfolio(request):
@@ -210,12 +241,12 @@ def add_transaction(request):
             )
             
             # 👇 TRIGGER THE TIME MACHINE 🕰️
-            print("🔄 Triggering History Backfill...")
-            try:
-                backfill_portfolio_history(request.user)
-                print("✅ History Updated!")
-            except Exception as e:
-                print(f"⚠️ Backfill Failed: {e}")
+            # print("🔄 Triggering History Backfill...")
+            # try:
+            #     backfill_portfolio_history(request.user)
+            #     print("✅ History Updated!")
+            # except Exception as e:
+            #     print(f"⚠️ Backfill Failed: {e}")
 
             return JsonResponse({"status": "success"})
         except Exception as e:
