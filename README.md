@@ -11,7 +11,9 @@
 ![React](https://img.shields.io/badge/Frontend-React_Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 
 ---
-
+## 🖥️ Frontend
+This is the Backend Engine (API).
+Looking for the User Interface? Check out the **[Frontend Repository](https://github.com/pandaa-69/PandaLedger-Frontend)**.
 ## 📖 Overview
 
 **PandaLedger** is not your average expense tracker. It is a **Modular Monolith** engineered to bring hedge-fund level portfolio analysis to retail investors.
