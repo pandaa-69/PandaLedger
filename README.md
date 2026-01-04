@@ -1,4 +1,4 @@
-```markdown
+
 # 🐼 PandaLedger
 > **Institutional-Grade Analytics for Personal Finance.**
 > *Because "tracking expenses" is for amateurs. I track Net Worth.*
@@ -57,18 +57,16 @@ sequenceDiagram
     A-->>U: 200 OK (Instant Response)
     Note over U: UI Updates Immediately
     
-    rect rgb(20, 20, 20)
-        Note right of T: 🔄 The "Ghost" Work
-        T->>D: Fetch History (15 Years)
-        T->>T: Vectorized Calc (Pandas)
-        T->>D: Update Analytics Tables
-    end
+    Note right of T: 🔄 The "Ghost" Work
+    T->>D: Fetch History (15 Years)
+    T->>T: Vectorized Calc (Pandas)
+    T->>D: Update Analytics Tables
 
 ```
 
 ### 3. 🛡️ Hybrid Data Layer & Smart Routing
 
-*Found in: `portfolio/views.py*`
+*Found in: `portfolio/views.py`*
 
 **The Challenge:** Yahoo Finance is great for Stocks but terrible for Indian Mutual Funds. MFAPI is great for MFs but doesn't have US Stocks.
 **My Solution:**
@@ -171,6 +169,3 @@ python manage.py runserver
 
 *Engineered with ❤️ (and a lot of coffee) by Durgesh (Panda).*
 
-```
-
-```
