@@ -8,7 +8,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# 🚨 CRITICAL: Ensure your local .env file has DEBUG=True
+# I set DEBUG based on the environment to ensure security in production.
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Allow Render backend and Vercel frontend domains
@@ -48,32 +48,27 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- 🛡️ SMART SECURITY CONFIGURATION ---
-# This block automatically switches rules so you don't break Local OR Prod.
-
+# I configure security settings dynamically. 
+# In production, I enforce SSL and secure cookies. Locally, I keep it relaxed for development.
 if not DEBUG:
-    # 🌍 PRODUCTION (Render)
-    # Forces HTTPS and Secure Cookies. Required for Vercel Proxy.
+    # Production: Enforce HTTPS and secure cookies for Render/Vercel.
     SECURE_SSL_REDIRECT = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     
-    # "None" allows the cookie to be sent across domains (Vercel -> Render)
-    # This ONLY works if Secure=True.
+    # I allow cross-domain cookies for Vercel -> Render communication.
     CSRF_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SAMESITE = 'None'
     
-    # Trust the Vercel Proxy forwarding
+    # Trust the proxy headers from Vercel.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 else:
-    # 💻 LOCALHOST (Laptop)
-    # Disables HTTPS enforcement so local dev doesn't crash.
+    # Localhost: Disable HTTPS enforcement to prevent dev crashes.
     SECURE_SSL_REDIRECT = False
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_SECURE = False
     
-    # "Lax" is standard for localhost. It works WITHOUT Secure=True.
-    # If you leave this as 'None' locally, Chrome will block your login.
+    # 'Lax' is standard for local development.
     CSRF_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SAMESITE = 'Lax'
 
@@ -84,7 +79,7 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
-# 1. CORS: Allow the NEW Frontend Domain
+# CORS: I explicitly allow the frontend domain.
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOWED_ORIGINS = [
@@ -96,7 +91,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
-# 2. CSRF: Trust the NEW Frontend Domain
+# CSRF: I trust the frontend domain for cross-site requests.
 CSRF_TRUSTED_ORIGINS = [
     "https://panda-ledger-frontend.vercel.app",
     "https://api.pandaledger.tech",
@@ -107,7 +102,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-# 3. CRITICAL: Allow Cookies on Vercel Domain
+# I unset cookie domains to aid Vercel integration.
 CSRF_COOKIE_DOMAIN = None
 SESSION_COOKIE_DOMAIN = None
 

@@ -1,35 +1,36 @@
+import logging
+import os
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import get_user_model
-from portfolio.views import wake_up
-import os 
 from dotenv import load_dotenv
+from portfolio.views import wake_up
 
-# 1. Load the .env from the base directory (if running locally)
-# This looks for .env in the parent folders automatically
+# I load the .env file here to ensure environment variables are present before the app boots.
 load_dotenv()
 
-# 2. Auto-create Superuser (Securely)
+logger = logging.getLogger(__name__)
+
+# I auto-provision a superuser if the credentials are in the environment.
+# This makes cold-starts on new deployments seamless.
 User = get_user_model()
 try:
-    # Get credentials from .env or Render Dashboard
     SU_USERNAME = os.getenv('DJANGO_SUPERUSER_USERNAME')
     SU_EMAIL = os.getenv('DJANGO_SUPERUSER_EMAIL')
     SU_PASSWORD = os.getenv('DJANGO_SUPERUSER_PASSWORD')
 
-    # Only run if we actually have a password set (safety check)
     if SU_PASSWORD:
         if not User.objects.filter(username=SU_USERNAME).exists():
-            print(f"👤 Creating Superuser: {SU_USERNAME}...")
+            logger.info(f"Creating Superuser: {SU_USERNAME}...")
             User.objects.create_superuser(SU_USERNAME, SU_EMAIL, SU_PASSWORD)
-            print("✅ Superuser created successfully!")
+            logger.info("Superuser created successfully.")
         else:
-            print("ℹ️ Superuser already exists. Skipping.")
+            logger.info("Superuser already exists. Skipping creation.")
     else:
-        print("⚠️ No Superuser Password found in Env. Skipping creation.")
+        logger.warning("No Superuser Password found in environment. Skipping creation.")
 
 except Exception as e:
-    print(f"❌ Error creating superuser: {e}")
+    logger.error(f"Error creating superuser: {e}")
 
 
 urlpatterns = [
