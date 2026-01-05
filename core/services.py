@@ -1,21 +1,35 @@
-import yfinance as yf 
+import logging
+import yfinance as yf
 from django.core.cache import cache
+from django.apps import apps
+from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 def get_usd_inr_rate():
-    """ Fetches the live USD to INR rate
     """
-    #we will use caching so that we dont hit yahoo website multiple times to get banned 
+    Fetches the live USD to INR exchange rate.
 
-    # we will check if there is any data in the cache if yes we will simple return the data ans if not then we will try to fetch it from yfinance
+    Strategy:
+    1. Check Cache (TTL 3 hours).
+    2. If not in cache, fetch from Yahoo Finance.
+    3. If successful, update Cache and persist to DB (Asset model) for future fallback.
+    4. If YFinance fails, attempt to retrieve the last known rate from DB.
+    5. If DB is empty, return a hardcoded safe fallback.
 
-    # check if the rate is already in our Cache 
-    cached_rate = cache.get('usd_inr_live_rate')
+    Returns:
+        float: The current USD/INR exchange rate.
+    """
+    cache_key = 'usd_inr_live_rate'
+    cached_rate = cache.get(cache_key)
 
     if cached_rate:
         return cached_rate
-    
-    # if not in cache fetch it from the internet 
-    
+
+    # Dynamic import to avoid circular dependency if core is imported by portfolio
+    Asset = apps.get_model('portfolio', 'Asset')
+    fallback_value = 87.00 
+
     try:
         # fetch data from yahoo 
         ticker = yf.Ticker("INR=X")
@@ -25,20 +39,23 @@ def get_usd_inr_rate():
         data = ticker.history( period = "1d", interval ="1m")
 
         if not data.empty:
-            current_rate = round(data['Close'].iloc[-1], 2)
+            current_rate = round(float(data['Close'].iloc[-1]), 2)
 
             # we will save it in cache for 3hrs 
             cache.set('usd_inr_live_rate', current_rate, 10800) # 3hrs in seconds 
 
             return current_rate
+        else:
+            logger.warning("Yahoo Finance returned empty data for INR=X")
+
     except Exception as e:
-        print(f"Error fetching USD Rate: {e}")
-        # if internet is down we will return a safe fallback value 
+        logger.error(f"Error fetching USD Rate from Yahoo: {e}")
 
-        return 87.00
-    
-    return 87.00 # Fallback if data is empty i will improve it later with the help of DB 
-        
-
-    
-
+    # Fallback Strategy: Try DB first, then hardcoded value
+    try:
+        asset = Asset.objects.get(symbol="INR=X")
+        logger.info(f"Using DB fallback rate: {asset.last_price}")
+        return float(asset.last_price)
+    except Asset.DoesNotExist:
+        logger.warning("No DB fallback found for INR=X. Using hardcoded default.")
+        return fallback_value
