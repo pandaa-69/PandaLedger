@@ -1,31 +1,49 @@
 from django.db import models
-from django.conf import settings #this will import our custom user 
+from django.conf import settings
 
 class Category(models.Model):
-    name = models.CharField(max_length=50)
-
-    # link so that one user can have many categories
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    """
+    Represents an expense category (e.g., 'Groceries', 'Rent').
+    Categories are user-specific to allow for personalized organization.
+    """
+    name = models.CharField(max_length=50, help_text="Name of the category")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        related_name='categories',
+        help_text="The user who owns this category"
+    )
 
     class Meta:
-        verbose_name_plural = "Categories" # doing this to fix the typo in the admin pannel
+        verbose_name_plural = "Categories" 
         unique_together = ("name", "user")
 
-
     def __str__(self):
-        return f"{self.name}"
-    
+        return self.name
+
 class Expense(models.Model):
-    # linking the user 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    """
+    Records an individual financial transaction (outflow).
+    Linked to a user and optionally a category.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        related_name='expenses'
+    )
+    # If a category is deleted, keep the expense but mark as Uncategorized (NULL)
+    category = models.ForeignKey(
+        Category, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='expenses',
+        help_text="Category of the expense (optional)"
+    )
 
-    # linking the category to know what type of expense also in such a way that if we delete that specific category expense still exist in the DB and and financial history is not lost 
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.CharField(max_length=255)
-    date = models.DateTimeField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Expense amount")
+    description = models.CharField(max_length=255, help_text="Short description of the expense")
+    date = models.DateTimeField(help_text="Date and time of the expense")
 
     class Meta:
         ordering = ["-date"]
@@ -35,4 +53,5 @@ class Expense(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.description} - {self.amount} Category: {self.category}"
+        cat_name = self.category.name if self.category else "Uncategorized"
+        return f"{self.description} - {self.amount} ({cat_name})"
