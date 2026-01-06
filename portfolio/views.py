@@ -281,12 +281,6 @@ def delete_transaction(request, transaction_id):
             
             # Trigger History Backfill
             logger.info("Triggering History Backfill...")
-            try:
-                backfill_portfolio_history(request.user)
-                logger.info("History Updated.")
-            except Exception as e:
-                logger.error(f"Backfill Failed: {e}")
-
             return JsonResponse({"status": "success"})
         except Transaction.DoesNotExist:
             return JsonResponse({"error": "Transaction not found"}, status=404)
