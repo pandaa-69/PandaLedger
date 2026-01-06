@@ -158,9 +158,8 @@ def fetch_live_data_and_save():
                 cache.set('market_news_items', processed_news, 600)
 
         # --- SAVE TO DB & CACHE ---
-        # Cache for 5 seconds to match user's desired update rate
-        # With batching, this is approx 720 calls/hour (safe)
-        cache.set('market_dashboard_full', dashboard_data, 5)
+        # Cache for 10 seconds to match user's desired update rate
+        cache.set('market_dashboard_full', dashboard_data, 10)
         
         # Persist to DB
         MarketCache.objects.update_or_create(id=1, defaults={'data': dashboard_data})
