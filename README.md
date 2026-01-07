@@ -1,7 +1,7 @@
 
 # 🐼 PandaLedger
 > **Institutional-Grade Analytics for Personal Finance.**
-> *Because "tracking expenses" is for amateurs. I track Net Worth.*
+> *Because modern portfolio tracking goes beyond expenses.*
 
 ![Status](https://img.shields.io/badge/Status-Production-brightgreen?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)
