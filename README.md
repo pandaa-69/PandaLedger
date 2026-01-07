@@ -22,9 +22,9 @@ While it looks like a simple finance app on the surface, the backend is a high-p
 
 ---
 
-## ⚡ Engineering Highlights: The "Wow" Factor
+## ⚡ Engineering Highlights & Design Decisions
 
-I didn't just write loops; I engineered solutions. Here is the hidden complexity powering PandaLedger:
+This project focuses on performance-oriented design and real-world constraints rather than naive implementations. Here is the hidden complexity powering PandaLedger:
 
 ### 1. 🏎️ Vectorized "Time-Machine" Engine
 *Found in: `analytics/services/backfill.py`*
