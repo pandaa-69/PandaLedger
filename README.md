@@ -111,6 +111,33 @@ graph TD
 
 ---
 
+## ⚖️ Design Tradeoffs & Limitations
+
+Every architecture decision carries a cost. Here are the conscious tradeoffs made in PandaLedger:
+
+### 1. External Data Dependencies
+*   **Limitation:** The system relies on **Yahoo Finance** and **MFAPI.in** for live data.
+*   **Tradeoff:** Instead of paying $500/mo for a Bloomberg Terminal API, we accept that data fetching might fail if these services go down.
+*   **Mitigation:** The system relies heavily on **Caching** and **Graceful Degradation**. If an external API fails, the dashboard serves the last known good price from the DB rather than crashing.
+
+### 2. Single-Process Architecture (LocMemCache)
+*   **Limitation:** The current locking mechanism (`market_update_lock`) uses `LocMemCache` (RAM). This means it works perfectly on a single worker instance but would fail in a distributed cluster (e.g., Kubernetes with 50 pods).
+*   **Tradeoff:** Keeps hosting simple (no Redis required) for the free tier.
+*   **Future Path:** Switch `CACHES` to `RedisCache` in `settings.py` for horizontal scaling.
+
+### 3. Concurrency Model (Threading vs. Celery)
+*   **Limitation:** Background jobs (price updates, history backfills) use Python's `threading` and `ThreadPoolExecutor`.
+*   **Tradeoff:** Avoids the operational overhead of managing a separate message queue (RabbitMQ/Redis) and worker process (Celery) for a personal finance app.
+*   **Risk:** If the server restarts *during* a backfill, that job is lost.
+*   **Reasoning:** Since backfills are fast (<1s) and idempotent, the complexity of Celery wasn't justified for v1.
+
+### 4. Rate-Limited Updates (10s Interval)
+*   **Limitation:** The live dashboard updates every 10 seconds, not sub-second real-time.
+*   **Tradeoff:** Prevents our IP from being banned by Yahoo Finance's abuse detection systems.
+*   **Mechanism:** A custom "Thundering Herd" lock ensures we only send **360 requests/hour** to Yahoo, regardless of how many users are online.
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Core**: Python 3.10+, Django 5.0
