@@ -137,6 +137,37 @@ Every architecture decision carries a cost. Here are the conscious tradeoffs mad
 *   **Mechanism:** A custom "Thundering Herd" lock ensures we only send **360 requests/hour** to Yahoo, regardless of how many users are online.
 
 ---
+## 🚀 Future Roadmap
+
+The journey to financial mastery never ends. Here is what is coming next:
+
+### 1. 📬 Automated Smart Reporting
+* **Goal:** "Set it and forget it" monitoring.
+* **Plan:** Implement Weekly & Monthly consolidated email reports (Net Worth delta, Top Gainers/Losers, Spending breakdown) using `Django-Anymail` and custom templates.
+### 2. ⚡ Distributed Task Queue (Celery + Redis)
+*   **Goal:** Enterprise-grade reliability.
+*   **Plan:** Migrate background `ThreadPools` to **Celery**. This will allow retries for failed API calls, prioritized queues for premium users, and persistent job tracking.
+
+### 3. 📈 Advanced Visualization Suite
+*   **Goal:** Deeper insights into `Ledger` (Expenses) and `Analytics`.
+*   **Plan:**
+    *   Sankey Diagrams for Income vs. Expense flows.
+    *   Monte Carlo simulations for portfolio projection.
+    *   Heatmaps for correlation analysis between assets.
+
+ ### 4. 🧭 Market Sentiment Indicators
+* **Goal:** Macro-level context.
+* **Plan:** Integrate Fear & Greed Index and volatility indicators
+  directly into the dashboard to provide regime awareness.
+
+
+### 5. 🤖 Context-Aware Portfolio Insights (LLMs)
+* **Goal:** Assist decision-making, not replace it.
+* **Plan:** Integrate LLMs (Gemini/OpenAI) to analyze portfolio context
+  (e.g., concentration risk, volatility exposure) and generate
+  explainable rebalancing suggestions grounded in modern portfolio theory.
+
+---
 
 ## 🛠️ Tech Stack
 
