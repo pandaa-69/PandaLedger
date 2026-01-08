@@ -16,9 +16,9 @@ This is the Backend Engine (API).
 Looking for the User Interface? Check out the **[Frontend Repository](https://github.com/pandaa-69/PandaLedger-Frontend)**.
 ## 📖 Overview
 
-**PandaLedger** is not your average expense tracker. It is a **Modular Monolith** engineered to bring hedge-fund level portfolio analysis to retail investors.
+**PandaLedger** is not your average expense tracker. It is a **Modular Monolith** engineered to bring industry level portfolio analysis to retail investors.
 
-While it looks like a simple finance app on the surface, the backend is a high-performance engine capable of reconstructing **15+ years of financial history in milliseconds**, handling complex corporate actions, and managing multi-asset portfolios (Stocks, Crypto, ETFs, Mutual Funds) with real-time valuation.
+While it looks like a simple finance app on the surface, the backend is a high-performance engine capable of reconstructing **30 years of financial history in milliseconds**, handling complex corporate actions, and managing multi-asset portfolios (Stocks, Crypto, ETFs, Mutual Funds) with real-time valuation.
 
 ---
 
@@ -74,7 +74,7 @@ sequenceDiagram
 **My Solution:**
 
 * **Smart Routing**: The backend automatically detects the asset type. Stock/Crypto? Batch request to Yahoo. Mutual Fund? Route to MFAPI.
-* **Stale-While-Revalidate**: I serve cached prices immediately (from Redis/DB) to ensure the UI is snappy, while a background worker refreshes the data if it's stale.
+* **Stale-While-Revalidate**: I serve cached prices immediately (from localmemcached/DB) to ensure the UI is snappy, while a background worker refreshes the data if it's stale.
 
 ---
 
@@ -227,5 +227,5 @@ python manage.py runserver
 
 ---
 
-*Engineered with ❤️ (and a lot of coffee) by Durgesh (Panda).*
+*Engineered with ❤️ (and lots of curiosity) by Durgesh (Panda).*
 
