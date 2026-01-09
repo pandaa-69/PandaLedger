@@ -80,7 +80,7 @@ sequenceDiagram
 
 ## 🏗️ Architecture: Modular Monolith
 
-I rejected the hype of Microservices for the pragmatic power of a **Modular Monolith**. This gives code isolation (clear boundaries) with deployment simplicity (zero network latency).
+I rejected Microservices for the pragmatic power of a **Modular Monolith**. This gives code isolation (clear boundaries) with deployment simplicity (zero network latency).
 
 ```mermaid
 graph TD

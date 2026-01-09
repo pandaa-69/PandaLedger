@@ -43,7 +43,7 @@ class Expense(models.Model):
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Expense amount")
     description = models.CharField(max_length=255, help_text="Short description of the expense")
-    date = models.DateTimeField(help_text="Date and time of the expense")
+    date = models.DateField(help_text="Date and time of the expense")
 
     class Meta:
         ordering = ["-date"]
