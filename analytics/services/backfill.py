@@ -70,7 +70,9 @@ def backfill_portfolio_history(user):
         if yahoo_symbols:
             try:
                 # Download close prices
-                yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False, auto_adjust=True)['Close']
+                # threads=False prevents spawning new threads inside the background thread (RAM Safety)
+                # trade off as we are on render free tier we are bound to use false beacuse we need our server to be in the limit of our free tier but the drawkback is the fecthing will take more time but as this a asynchronus task we can manage it we are trading speed for stability 
+                yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False, auto_adjust=True, threads=False)['Close']
                 
                 # Normalize YF data structure (Series -> DataFrame if single asset)
                 if isinstance(yf_data, pd.Series):
