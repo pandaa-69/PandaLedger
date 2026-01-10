@@ -24,11 +24,28 @@ def detect_asset_type(info, symbol, name):
     name_upper = name.upper()
     symbol_upper = symbol.upper()
 
-    if sType == 'CRYPTOCURRENCY' or '-USD' in symbol_upper: return 'CRYPTO'
-    if 'REIT' in name_upper or sType == 'REIT': return 'REIT'
-    if 'GOLD' in name_upper or 'SILVER' in name_upper: return 'GOLD'
-    if ('ETF' in name_upper or 'BEES' in name_upper or 'MON100' in symbol_upper or sType == 'ETF'): return 'ETF'
-    if sType == 'MUTUALFUND' or 'FUND' in name_upper: return 'MF'
+    # Mutual funds (AMFI code)
+    if symbol.isdigit():
+        return 'MF'
+    
+    # Crypto
+    if "-USD" in symbol:
+        return 'CRYPTO'
+    
+    # ETFS
+    if "ETF" in name or "Exchange traded fund" in name :
+        if 'GOLD' in name or 'SILVER' in name:
+            return 'GOLD'
+        return 'ETF'
+    
+    # Sovereign / Physical Gold
+    if 'SGB' in symbol or name.startswith('SOVEREIGN GOLD'):
+        return 'GOLD'
+    
+    # REITs
+    if 'REIT' in name :
+        return 'REIT'
+    
     return 'STOCK'
 
 
@@ -343,3 +360,15 @@ def seed_db_view(request):
     except Exception as e:
         logger.error(f"Error seeding DB: {e}")
         return HttpResponse(f"Error seeding DB: {str(e)}", status=500)
+    
+def classify_asset_view(request):
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorised: Admins only", status = 403)
+    
+    try :
+        call_command('reclassify_asset')
+        return HttpResponse("DB asset classification commpleted")
+    except Exception as e:
+        logger.error(f"Error classifying the assets: {str(e)}", status = 500)
+        
+        return HttpResponse(f"Error classifying the assets: {str(e)}", status = 500)
