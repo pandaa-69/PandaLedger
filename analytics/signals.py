@@ -21,6 +21,14 @@ def run_backfill_in_background(user):
     except Exception as e:
         logger.error(f"❌ Background Backfill failed for user {user.username}: {e}", exc_info=True)
 
+# Global Executor: Acts as a simple "Queue".
+# max_workers=1 ensures we only process ONE backfill at a time.
+# If 100 users add transactions, they will form a line in memory 
+# instead of crashing the server.
+backfill_executor = threading.Semaphore(1) # We use semaphore logic conceptually, but Executor is better
+from concurrent.futures import ThreadPoolExecutor
+executor = ThreadPoolExecutor(max_workers=1)
+
 @receiver(post_save, sender=Transaction)
 @receiver(post_delete, sender=Transaction)
 def trigger_backfill(sender, instance, **kwargs):
@@ -33,20 +41,16 @@ def trigger_backfill(sender, instance, **kwargs):
     - Transaction Deletion
     
     Note:
-    Uses `threading.Thread` for simplicity. In a high-scale production environment, 
-    this should be offloaded to a task queue like Celery or Redis Queue (RQ) 
-    to prevent thread exhaustion.
+    Uses a global `ThreadPoolExecutor` (max_workers=1) to strictly serialize backfills.
+    This protects the server from OOM crashes by ensuring 
+    RAM usage remains constant regardless of concurrent users.
     """
     try:
         user = instance.holding.user
         
-        # Run in a separate thread so the UI doesn't freeze while waiting for Yahoo Finance/calculations
-        task = threading.Thread(
-            target=run_backfill_in_background, 
-            args=(user,),
-            daemon=True # Daemon threads are killed if the main process exits
-        )
-        task.start()
+        # Submit to the queue aka ThreadPool
+        # This returns immediately, so the UI is still fast.
+        executor.submit(run_backfill_in_background, user)
         
     except Exception as e:
         logger.error(f"Error triggering backfill signal: {e}", exc_info=True)
