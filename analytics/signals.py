@@ -4,6 +4,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from portfolio.models import Transaction
 from analytics.services.backfill import backfill_portfolio_history
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def run_backfill_in_background(user):
 # If 100 users add transactions, they will form a line in memory 
 # instead of crashing the server.
 backfill_executor = threading.Semaphore(1) # We use semaphore logic conceptually, but Executor is better
-from concurrent.futures import ThreadPoolExecutor
+
 executor = ThreadPoolExecutor(max_workers=1)
 
 @receiver(post_save, sender=Transaction)
