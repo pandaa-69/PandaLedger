@@ -1,7 +1,7 @@
 import logging
 import json
-import requests
-from datetime import date, timedelta
+import requests , zoneinfo
+from datetime import date, timedelta , datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.http import JsonResponse, HttpResponse
@@ -125,10 +125,14 @@ def update_live_prices(holdings):
     - Yahoo Finance (Batch) for Stocks/Crypto
     - MFAPI.in (Parallel Threads) for Mutual Funds
     """
-    now = timezone.now()
-    stock_cooldown_time = now - timedelta(minutes=5)
-    mf_cooldown_time = now - timedelta(hours=21)
+    ist = zoneinfo.ZoneInfo('Asia/Kolkata')  #to get the timezone stamp of india
+
+    now_utc = timezone.now() #the system timezone in UTC
+    stock_cooldown_time = now_utc - timedelta(minutes=5)
+    # mf_cooldown_time = now - timedelta(hours=21) ( not need removed)
     
+    # if we set a direct delta then a bug may apear becuase if suppose a user updated the price of mf at 23:10 pm and a timer for 21 is set from that time then the next day the price wont get updated for the whole day to fix this we need to make sure we check the date only like if date is greater than date then we run the mf update price 
+
     yahoo_assets = []
     yahoo_symbols = []
     mf_assets = []
@@ -139,7 +143,14 @@ def update_live_prices(holdings):
         is_pricing_missing = asset.last_price == 0
 
         if asset.symbol.isdigit():  # MF request
-            if is_pricing_missing or asset.updated_at < mf_cooldown_time:
+            # we need to convert the UTC into IST before checking the updated time
+            last_updated_date_ist = asset.updated_at.astimezone(ist).date()
+
+            # current date in UTC we need to also convert it in IST before check 
+            current_date_ist = now_utc.astimezone(ist).date()
+
+            # Compare "Indian Days" in ist not UTC 
+            if is_pricing_missing or last_updated_date_ist<current_date_ist:
                 mf_assets.append(asset)
         else:
             # Stock/Crypto request
@@ -166,7 +177,7 @@ def update_live_prices(holdings):
                         asset.updated_at = timezone.now()
                         updated_assets.append(asset)
                 except Exception:
-                    pass
+                   logger.warning(f"Failed to fetch {asset.symbol}")
         except Exception as e:
             logger.error(f"Yahoo Batch Failed: {e}")
 
