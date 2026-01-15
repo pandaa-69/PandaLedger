@@ -33,6 +33,12 @@ except Exception as e:
     logger.error(f"Error creating superuser: {e}")
 
 
+
+# for verification of sentry 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('wakeup/', wake_up, name='wakeup'),
@@ -41,4 +47,5 @@ urlpatterns = [
     path('api/', include('core.urls')),
     path('api/', include('dashboard.urls')),
     path('api/', include('analytics.urls')),
+    path('sentry-debug/', trigger_error),
 ]
