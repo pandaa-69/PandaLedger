@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from django.db import transaction
 from portfolio.models import Transaction
 from analytics.models import PortfolioSnapshot
+from django.db import close_old_connections
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ def backfill_portfolio_history(user):
         user (User): The user instance to backfill data for.
     """
     try:
+        # important to close the old connections and start a fresh connection in a thread which is intented to work for a lomgtime in async mode
+        close_old_connections()
         # 1. Fetch Transactions
         txs = list(Transaction.objects.filter(holding__user=user)
                    .select_related('holding__asset')

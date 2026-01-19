@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
+from django.db import close_old_connections
+
 def run_backfill_in_background(user):
     """
     Executes the portfolio history backfill process in a separate thread.
@@ -17,6 +19,7 @@ def run_backfill_in_background(user):
     """
     logger.info(f"🔄 Background Backfill started for user: {user.username}")
     try:
+        close_old_connections()
         backfill_portfolio_history(user)
         logger.info(f"✅ Background Backfill complete for user: {user.username}")
     except Exception as e:
@@ -26,7 +29,6 @@ def run_backfill_in_background(user):
 # max_workers=1 ensures we only process ONE backfill at a time.
 # If 100 users add transactions, they will form a line in memory 
 # instead of crashing the server.
-backfill_executor = threading.Semaphore(1) # We use semaphore logic conceptually, but Executor is better
 
 executor = ThreadPoolExecutor(max_workers=1)
 
@@ -52,6 +54,6 @@ def trigger_backfill(sender, instance, **kwargs):
         # Submit to the queue aka ThreadPool
         # This returns immediately, so the UI is still fast.
         executor.submit(run_backfill_in_background, user)
-        
+
     except Exception as e:
         logger.error(f"Error triggering backfill signal: {e}", exc_info=True)
