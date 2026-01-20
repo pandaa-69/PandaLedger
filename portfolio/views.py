@@ -145,7 +145,7 @@ def update_live_prices(holdings):
         if asset.symbol.isdigit():  # MF request
              # Define "start of today" in IST
             midnight_ist = now_utc.astimezone(ist).replace(
-                hour=0, minute=0, second=0, microsecond=0
+                hour=4, minute=0, second=0, microsecond=0
             )
 
             # Refresh needed if:
