@@ -143,14 +143,18 @@ def update_live_prices(holdings):
         is_pricing_missing = asset.last_price == 0
 
         if asset.symbol.isdigit():  # MF request
-            # we need to convert the UTC into IST before checking the updated time
-            last_updated_date_ist = asset.updated_at.astimezone(ist).date()
+             # Define "start of today" in IST
+            midnight_ist = now_utc.astimezone(ist).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
 
-            # current date in UTC we need to also convert it in IST before check 
-            current_date_ist = now_utc.astimezone(ist).date()
+            # Refresh needed if:
+            # - price missing
+            # - last update happened before today's midnight IST
+            last_update_ist = asset.updated_at.astimezone(ist)
 
             # Compare "Indian Days" in ist not UTC 
-            if is_pricing_missing or last_updated_date_ist<current_date_ist:
+            if is_pricing_missing or last_update_ist<midnight_ist:
                 mf_assets.append(asset)
         else:
             # Stock/Crypto request
