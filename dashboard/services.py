@@ -41,7 +41,7 @@ def fetch_live_data_and_save():
         # 1. Batch Fetch All Prices (Efficient: 1 Call)
         # Using threads=True for faster downloading; group_by='ticker' organizes data by symbol
         market_data = yf.download(tickers=" ".join(all_symbols), period="5d", interval="1d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
-        
+        print(market_data.to_json())
         # Extract USD Rate for Conversions
         # Handle potential missing data for INR=X
         usd_price = 87.0
