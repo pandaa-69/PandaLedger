@@ -21,7 +21,7 @@ def fetch_live_data_and_save():
     logger.info("Background Update: Fetching fresh market data via Batch API...")
     
     tickers_config = {
-        "indices": { "nifty":"^NSEI", "sensex":"^BSESN", 'nasdaq':"^IXIC" },
+        "indices": { "nifty":"^NSEI", "sensex":"^BSESN", 'nasdaq-100':"^NDX" },
         "commodities": { "gold":"GC=F", "silver":"SI=F" },
         "crypto": { "bitcoin":"BTC-USD", "eth":"ETH-USD" },
         "forex": { "usd_inr":"INR=X" }
