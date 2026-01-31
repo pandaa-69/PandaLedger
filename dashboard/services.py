@@ -58,9 +58,9 @@ def fetch_live_data_and_save():
         # 1. Batch Fetch All Prices (Efficient: 1 Call)
         # Using threads=True for faster downloading; group_by='ticker' organizes data by symbol
         market_data = yf.download(tickers=" ".join(all_symbols), period="5d", interval="1d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
-        print("Data before cleaning")
+        
         market_data= market_data.ffill()
-        print(market_data.to_json())
+        
         # Extract USD Rate for Conversions
         # Handle potential missing data for INR=X
         usd_price = 87.0
@@ -103,12 +103,21 @@ def fetch_live_data_and_save():
                         
                         # Change Calculation
                         if len(display_history) > 1:
-                            prev_close = float(display_history.iloc[-2])
+                            lookback_index = -2
+                            prev_close = float(display_history.iloc[lookback_index])
+
+                            # while the previous price is same as today we can assume its a holiday or weekend and we havent ran out of data from the history 
+                            # we look even further to get the percentage chanage
+
+                            while prev_close == current_price and abs(lookback_index)<len(display_history) and abs(lookback_index)<5:
+                                lookback_index -=1
+                                prev_close = float(display_history.iloc[lookback_index]) 
+
+                            # now we calculate the change against the last real price change we find
+                            change_pct = ((current_price-prev_close)/prev_close *100)
                         else:
-                            prev_close = current_price
-
-                        change_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0.0
-
+                            # fallback 
+                            change_pct= 0.0
                         dashboard_data["market_summary"].append({
                             "id": name,
                             "category": category,
@@ -121,8 +130,6 @@ def fetch_live_data_and_save():
                     logger.warning(f"Error processing {name} in batch: {e}")
         # cleaning the market data which might me miissing or false like infinity to prevent errors in postgresql saving data
         cleaned_market_data = clean_data(dashboard_data)
-        print("data after cleaning the data")
-        print(cleaned_market_data)
         # 3. Fetch News (Cached for 10 mins)
         cached_news = cache.get('market_news_items')
         
