@@ -127,7 +127,7 @@ def fetch_live_data_and_save():
         cached_news = cache.get('market_news_items')
         
         if cached_news:
-            dashboard_data["news"] = cached_news
+            cleaned_market_data["news"] = cached_news
         else:
             # Fetch fresh news only if cache expired
             news_sources = ["^NSEI", "^IXIC"] 
