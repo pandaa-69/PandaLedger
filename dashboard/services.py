@@ -3,9 +3,26 @@ import yfinance as yf
 import random
 import threading
 from django.core.cache import cache
+import math
 from .models import MarketCache
 
 logger = logging.getLogger(__name__)
+
+def clean_data(data):
+    """
+    Recursively replaces NAN and infinty with none(NULL) so postgress dont give an error
+    """
+    if isinstance(data, float):
+        # check for NAN or infinite values
+        if math.isnan(data) or math.isinf(data):
+            return None
+    elif isinstance(data, dict):
+        return {k: clean_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_data(v) for v in data]
+
+    return data    
+
 
 def fetch_live_data_and_save():
     """
@@ -41,6 +58,8 @@ def fetch_live_data_and_save():
         # 1. Batch Fetch All Prices (Efficient: 1 Call)
         # Using threads=True for faster downloading; group_by='ticker' organizes data by symbol
         market_data = yf.download(tickers=" ".join(all_symbols), period="5d", interval="1d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
+        print("Data before cleaning")
+        market_data= market_data.ffill()
         print(market_data.to_json())
         # Extract USD Rate for Conversions
         # Handle potential missing data for INR=X
@@ -100,7 +119,10 @@ def fetch_live_data_and_save():
                         })
                 except Exception as e:
                     logger.warning(f"Error processing {name} in batch: {e}")
-
+        # cleaning the market data which might me miissing or false like infinity to prevent errors in postgresql saving data
+        cleaned_market_data = clean_data(dashboard_data)
+        print("data after cleaning the data")
+        print(cleaned_market_data)
         # 3. Fetch News (Cached for 10 mins)
         cached_news = cache.get('market_news_items')
         
@@ -153,16 +175,16 @@ def fetch_live_data_and_save():
                             "time": content.get('pubDate')
                         })
                 
-                dashboard_data["news"] = processed_news
+                cleaned_market_data["news"] = processed_news
                 # Cache News specifically for 10 minutes (600 seconds)
                 cache.set('market_news_items', processed_news, 600)
 
         # --- SAVE TO DB & CACHE ---
         # Cache for 10 seconds to match user's desired update rate
-        cache.set('market_dashboard_full', dashboard_data, 10)
+        cache.set('market_dashboard_full', cleaned_market_data, 10)
         
         # Persist to DB
-        MarketCache.objects.update_or_create(id=1, defaults={'data': dashboard_data})
+        MarketCache.objects.update_or_create(id=1, defaults={'data': cleaned_market_data})
         logger.info(f"Market Data Updated. News Cached: {bool(cached_news)}")
         
         return dashboard_data
