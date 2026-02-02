@@ -100,7 +100,7 @@ def fetch_live_data_and_save():
                             # 1 Troy Ounce USD -> 1 Kg INR
                             current_price = (current_price * usd_price / 31.1035) * 1000
                             display_history = (display_history * usd_price / 31.1035) * 1000
-                        
+                        # note : there still a bug but not so common the bug can appear when the market was flat for 2 days so my pct change logic will check the last actuall different chnage of price but its quite uncommon for indexex to stay exactly flat  becuase some decimal point can still be different so i am not yet tacking that case here
                         # Change Calculation
                         if len(display_history) > 1:
                             lookback_index = -2
