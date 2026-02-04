@@ -94,12 +94,14 @@ def fetch_live_data_and_save():
                         # Gold/Silver Conversions (USD -> INR)
                         if name == "gold":
                             # 1 Troy Ounce USD -> 10 Grams INR
-                            current_price = (current_price * usd_price / 31.1035) * 10
-                            display_history = (display_history * usd_price / 31.1035) * 10
+                            current_price = (current_price * usd_price / 31.1035) * 10 *1.18
+                            display_history = (display_history * usd_price / 31.1035) * 10*1.18
+                            print(f"GOld price in inr = {current_price} \n and the hisotical price is {display_history}")
                         elif name == "silver":
                             # 1 Troy Ounce USD -> 1 Kg INR
-                            current_price = (current_price * usd_price / 31.1035) * 1000
-                            display_history = (display_history * usd_price / 31.1035) * 1000
+                            current_price = (current_price * usd_price / 31.1035) * 1000 *1.18
+                            display_history = (display_history * usd_price / 31.1035) * 1000 *1.18
+                            print(f"Silver price in inr = {current_price} \n and the hisotical price is {display_history}")
                         # note : there still a bug but not so common the bug can appear when the market was flat for 2 days so my pct change logic will check the last actuall different chnage of price but its quite uncommon for indexex to stay exactly flat  becuase some decimal point can still be different so i am not yet tacking that case here
                         # Change Calculation
                         if len(display_history) > 1:
