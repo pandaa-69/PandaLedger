@@ -94,6 +94,9 @@ def fetch_live_data_and_save():
                         # Gold/Silver Conversions (USD -> INR)
                         if name == "gold":
                             # 1 Troy Ounce USD -> 10 Grams INR
+                            # we were displaying gold and silver futures rates but thats not same as indian rates to be close to
+                            #  indian price adding a 18% custom duty multpilication to make it as close as possible to indian 
+                            # prices without needing of another source of info its still not 100% accurate but it will work for now we can upgrade it later
                             current_price = (current_price * usd_price / 31.1035) * 10 *1.18
                             display_history = (display_history * usd_price / 31.1035) * 10*1.18
                             print(f"GOld price in inr = {current_price} \n and the hisotical price is {display_history}")
