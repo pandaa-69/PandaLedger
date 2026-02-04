@@ -99,12 +99,10 @@ def fetch_live_data_and_save():
                             # prices without needing of another source of info its still not 100% accurate but it will work for now we can upgrade it later
                             current_price = (current_price * usd_price / 31.1035) * 10 *indian_charges
                             display_history = (display_history * usd_price / 31.1035) * 10*indian_charges
-                            print(f"GOld price in inr = {current_price} \n and the hisotical price is {display_history}")
                         elif name == "silver":
                             # 1 Troy Ounce USD -> 1 Kg INR
                             current_price = (current_price * usd_price / 31.1035) * 1000 *indian_charges
                             display_history = (display_history * usd_price / 31.1035) * 1000 *indian_charges
-                            print(f"Silver price in inr = {current_price} \n and the hisotical price is {display_history}")
                         # note : there still a bug but not so common the bug can appear when the market was flat for 2 days so my pct change logic will check the last actuall different chnage of price but its quite uncommon for indexex to stay exactly flat  becuase some decimal point can still be different so i am not yet tacking that case here
                         # Change Calculation
                         if len(display_history) > 1:
