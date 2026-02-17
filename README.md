@@ -1,6 +1,6 @@
 
 # 🐼 PandaLedger
-> **Institutional-Grade Analytics for Personal Finance.**
+> **Accurate analytics for Personal Finance.**
 > *Because modern portfolio tracking goes beyond expenses.*
 
 ![Status](https://img.shields.io/badge/Status-Production-brightgreen?style=for-the-badge)
