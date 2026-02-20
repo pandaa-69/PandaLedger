@@ -57,7 +57,7 @@ def fetch_live_data_and_save():
     try:
         # 1. Batch Fetch All Prices (Efficient: 1 Call)
         # Using threads=True for faster downloading; group_by='ticker' organizes data by symbol
-        market_data = yf.download(tickers=" ".join(all_symbols), period="5d", interval="1d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
+        market_data = yf.download(tickers=" ".join(all_symbols), period="1mo", interval="1d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
         
         market_data= market_data.ffill()
         

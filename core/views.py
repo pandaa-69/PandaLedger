@@ -166,7 +166,7 @@ def request_password_reset(request):
                 'to': user.email
             }
 
-            # 5. Send Async (Instant Return) 🚀
+            # 5. Send Async (Instant Return) 
             send_email_async(email_data)
 
             return JsonResponse({"message": "If an account exists, a reset link has been sent."})
