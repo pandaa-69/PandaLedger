@@ -200,20 +200,6 @@ class Command(BaseCommand):
             ("ATOM-USD", "Cosmos", "CRYPTO"),
             ("XLM-USD", "Stellar", "CRYPTO"),
             ("XMR-USD", "Monero", "CRYPTO"),
-            
-            # ==========================================
-            # Direct Growth Mutual Funds
-            # ==========================================
-            ("0P0000XW8F.BO", "Parag Parikh Flexi Cap Fund", "MF"),
-            ("0P00005V13.BO", "SBI Bluechip Fund", "MF"),
-            ("0P0000KV2K.BO", "Axis Bluechip Fund", "MF"),
-            ("0P00011MAX.BO", "Quant Small Cap Fund", "MF"),
-            ("0P0000XUZE.BO", "Mirae Asset Emerging Bluechip", "MF"),
-            ("0P0000TDJB.BO", "HDFC Mid-Cap Opportunities", "MF"),
-            ("0P00009J3J.BO", "Axis Small Cap Fund", "MF"),
-            ("0P0000VOVR.BO", "Nippon India Small Cap", "MF"),
-            ("0P00005WF0.BO", "SBI Small Cap Fund", "MF"),
-            ("0P0001B764.BO", "Quant Mid Cap Fund", "MF"),
         ]
 
         # COUNTERS

@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from django.db import transaction
 from portfolio.models import Transaction
 from analytics.models import PortfolioSnapshot
+from django.db import close_old_connections
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ def backfill_portfolio_history(user):
         user (User): The user instance to backfill data for.
     """
     try:
+        # important to close the old connections and start a fresh connection in a thread which is intented to work for a lomgtime in async mode
+        close_old_connections()
         # 1. Fetch Transactions
         txs = list(Transaction.objects.filter(holding__user=user)
                    .select_related('holding__asset')
@@ -70,7 +73,9 @@ def backfill_portfolio_history(user):
         if yahoo_symbols:
             try:
                 # Download close prices
-                yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False, auto_adjust=True)['Close']
+                # threads=False prevents spawning new threads inside the background thread (RAM Safety)
+                # trade off as we are on render free tier we are bound to use false beacuse we need our server to be in the limit of our free tier but the drawkback is the fecthing will take more time but as this a asynchronus task we can manage it we are trading speed for stability 
+                yf_data = yf.download(yahoo_symbols, start=start_date, end=end_date + timedelta(days=1), progress=False, auto_adjust=True, threads=False)['Close']
                 
                 # Normalize YF data structure (Series -> DataFrame if single asset)
                 if isinstance(yf_data, pd.Series):

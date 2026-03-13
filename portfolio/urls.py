@@ -19,4 +19,5 @@ urlpatterns = [
 
     # Administration (Protected by Superuser Check)
     path('secret-seed-db/', views.seed_db_view, name='secret-seed'),
+    path('secret-classify-asset/', views.classify_asset_view, name='secret-classify'),
 ]

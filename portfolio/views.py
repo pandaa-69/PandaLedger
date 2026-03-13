@@ -1,7 +1,7 @@
 import logging
 import json
-import requests
-from datetime import date, timedelta
+import requests , zoneinfo
+from datetime import date, timedelta , datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.http import JsonResponse, HttpResponse
@@ -24,11 +24,28 @@ def detect_asset_type(info, symbol, name):
     name_upper = name.upper()
     symbol_upper = symbol.upper()
 
-    if sType == 'CRYPTOCURRENCY' or '-USD' in symbol_upper: return 'CRYPTO'
-    if 'REIT' in name_upper or sType == 'REIT': return 'REIT'
-    if 'GOLD' in name_upper or 'SILVER' in name_upper: return 'GOLD'
-    if ('ETF' in name_upper or 'BEES' in name_upper or 'MON100' in symbol_upper or sType == 'ETF'): return 'ETF'
-    if sType == 'MUTUALFUND' or 'FUND' in name_upper: return 'MF'
+    # Mutual funds (AMFI code)
+    if symbol.isdigit():
+        return 'MF'
+    
+    # Crypto
+    if "-USD" in symbol:
+        return 'CRYPTO'
+    
+    # ETFS
+    if "ETF" in name or "Exchange traded fund" in name :
+        if 'GOLD' in name or 'SILVER' in name:
+            return 'GOLD'
+        return 'ETF'
+    
+    # Sovereign / Physical Gold
+    if 'SGB' in symbol or name.startswith('SOVEREIGN GOLD'):
+        return 'GOLD'
+    
+    # REITs
+    if 'REIT' in name :
+        return 'REIT'
+    
     return 'STOCK'
 
 
@@ -108,10 +125,14 @@ def update_live_prices(holdings):
     - Yahoo Finance (Batch) for Stocks/Crypto
     - MFAPI.in (Parallel Threads) for Mutual Funds
     """
-    now = timezone.now()
-    stock_cooldown_time = now - timedelta(minutes=5)
-    mf_cooldown_time = now - timedelta(hours=21)
+    ist = zoneinfo.ZoneInfo('Asia/Kolkata')  #to get the timezone stamp of india
+
+    now_utc = timezone.now() #the system timezone in UTC
+    stock_cooldown_time = now_utc - timedelta(minutes=5)
+    # mf_cooldown_time = now - timedelta(hours=21) ( not need removed)
     
+    # if we set a direct delta then a bug may apear becuase if suppose a user updated the price of mf at 23:10 pm and a timer for 21 is set from that time then the next day the price wont get updated for the whole day to fix this we need to make sure we check the date only like if date is greater than date then we run the mf update price 
+
     yahoo_assets = []
     yahoo_symbols = []
     mf_assets = []
@@ -122,7 +143,18 @@ def update_live_prices(holdings):
         is_pricing_missing = asset.last_price == 0
 
         if asset.symbol.isdigit():  # MF request
-            if is_pricing_missing or asset.updated_at < mf_cooldown_time:
+             # Define "start of today" in IST
+            midnight_ist = now_utc.astimezone(ist).replace(
+                hour=4, minute=0, second=0, microsecond=0
+            )
+
+            # Refresh needed if:
+            # - price missing
+            # - last update happened before today's midnight IST
+            last_update_ist = asset.updated_at.astimezone(ist)
+
+            # Compare "Indian Days" in ist not UTC 
+            if is_pricing_missing or last_update_ist<midnight_ist:
                 mf_assets.append(asset)
         else:
             # Stock/Crypto request
@@ -149,7 +181,7 @@ def update_live_prices(holdings):
                         asset.updated_at = timezone.now()
                         updated_assets.append(asset)
                 except Exception:
-                    pass
+                   logger.warning(f"Failed to fetch {asset.symbol}")
         except Exception as e:
             logger.error(f"Yahoo Batch Failed: {e}")
 
@@ -281,8 +313,6 @@ def delete_transaction(request, transaction_id):
             
             # Trigger History Backfill
             logger.info("Triggering History Backfill...")
-            
-
             return JsonResponse({"status": "success"})
         except Transaction.DoesNotExist:
             return JsonResponse({"error": "Transaction not found"}, status=404)
@@ -345,3 +375,15 @@ def seed_db_view(request):
     except Exception as e:
         logger.error(f"Error seeding DB: {e}")
         return HttpResponse(f"Error seeding DB: {str(e)}", status=500)
+    
+def classify_asset_view(request):
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorised: Admins only", status = 403)
+    
+    try :
+        call_command('reclassify_asset')
+        return HttpResponse("DB asset classification commpleted")
+    except Exception as e:
+        logger.error(f"Error classifying the assets: {str(e)}", status = 500)
+        
+        return HttpResponse(f"Error classifying the assets: {str(e)}", status = 500)

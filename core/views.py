@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.db import IntegrityError
 import json 
@@ -166,7 +166,7 @@ def request_password_reset(request):
                 'to': user.email
             }
 
-            # 5. Send Async (Instant Return) 🚀
+            # 5. Send Async (Instant Return) 
             send_email_async(email_data)
 
             return JsonResponse({"message": "If an account exists, a reset link has been sent."})

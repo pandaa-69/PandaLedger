@@ -2,14 +2,38 @@ from pathlib import Path
 import os 
 from dotenv import load_dotenv
 import dj_database_url
+import sentry_sdk
 
 load_dotenv()
+# Set DEBUG based on the environment to ensure security in production.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    environment="local" if  DEBUG else "production",
+    # debug=True,
+    send_default_pii=True,
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=1.0,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler on when there is an active transaction
+    profile_lifecycle="trace",
+)
+
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# Set DEBUG based on the environment to ensure security in production.
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
 
 # Allow Render backend and Vercel frontend domains
 ALLOWED_HOSTS = [
