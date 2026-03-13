@@ -1,5 +1,6 @@
 import logging
 import json
+import  threading
 import requests , zoneinfo
 from datetime import date, timedelta , datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -216,8 +217,14 @@ def get_portfolio(request):
     holdings = Holding.objects.filter(user=request.user).select_related('asset')
     
     # Update prices if needed
-    if holdings.exists():
-        update_live_prices(holdings)
+    if holdings:
+        thread = threading.Thread(
+            target=update_live_prices,
+            args=(holdings,),
+            daemon=True
+        )
+        thread.start()
+
         # Refresh from DB
         holdings = Holding.objects.filter(user=request.user).select_related('asset')
 
