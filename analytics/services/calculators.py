@@ -2,7 +2,6 @@ import logging
 from portfolio.models import Transaction, Holding
 from datetime import date
 from pyxirr import xirr
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
