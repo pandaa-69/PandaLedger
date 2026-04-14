@@ -2,49 +2,47 @@ import logging
 import json
 import  threading
 import requests , zoneinfo
-from datetime import date, timedelta , datetime
+from datetime import date, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from analytics.services.backfill import get_last_snapshot_date
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
+from django.core.cache import cache
 from django.utils import timezone
 import yfinance as yf
-
+from analytics.signals import executor, run_backfill_in_background
 from .models import Asset, Holding, Transaction
-from analytics.services.backfill import backfill_portfolio_history
+
 
 logger = logging.getLogger(__name__)
 
-def detect_asset_type(info, symbol, name):
+def detect_asset_type(info, symbol:str, name):
     """
     Detect the asset type based on Yahoo Finance metadata.
     """
-    sType = info.get('quoteType', '').upper()
     name_upper = name.upper()
     symbol_upper = symbol.upper()
 
     # Mutual funds (AMFI code)
-    if symbol.isdigit():
+    if symbol_upper.isdigit():
         return 'MF'
     
     # Crypto
-    if "-USD" in symbol:
+    if "-USD" in symbol_upper:
         return 'CRYPTO'
     
     # ETFS
-    if "ETF" in name or "Exchange traded fund" in name :
-        if 'GOLD' in name or 'SILVER' in name:
+    if "ETF" in name_upper or "Exchange traded fund" in name_upper :
+        if 'GOLD' in name_upper or 'SILVER' in name_upper:
             return 'GOLD'
         return 'ETF'
     
     # Sovereign / Physical Gold
-    if 'SGB' in symbol or name.startswith('SOVEREIGN GOLD'):
+    if 'SGB' in symbol_upper or name_upper.startswith('SOVEREIGN GOLD'):
         return 'GOLD'
     
     # REITs
-    if 'REIT' in name :
+    if 'REIT' in name_upper :
         return 'REIT'
     
     return 'STOCK'
@@ -54,7 +52,7 @@ def detect_asset_type(info, symbol, name):
 def search_asset(request):
     """
     Search for assets by name or symbol.
-    Prioritizes local DB results (especially for seeded Mutual Funds).
+    Prioritizes local DB results especially for seeded Mutual Funds
     Falls back to Yahoo Finance for US Stocks/Crypto if local results are sparse.
     """
     if not request.user.is_authenticated:
@@ -88,7 +86,7 @@ def search_asset(request):
                 mcap_cat = 'MID'
 
             if price and price > 0:
-                detected_type = detect_asset_type(full_info, yahoo_symbol, name)
+                detected_type = detect_asset_type(full_info, str(yahoo_symbol), name)
                 new_asset = Asset.objects.create(
                     symbol=yahoo_symbol, name=name, last_price=price,
                     asset_type=detected_type, sector=sector, market_cap_category=mcap_cat
@@ -132,7 +130,9 @@ def update_live_prices(holdings):
     stock_cooldown_time = now_utc - timedelta(minutes=5)
     # mf_cooldown_time = now - timedelta(hours=21) ( not need removed)
     
-    # if we set a direct delta then a bug may apear becuase if suppose a user updated the price of mf at 23:10 pm and a timer for 21 is set from that time then the next day the price wont get updated for the whole day to fix this we need to make sure we check the date only like if date is greater than date then we run the mf update price 
+    # if we set a direct delta then a bug may apear becuase if suppose a user updated the price of mf at 23:10 pm and a
+    # timer for 21 is set from that time then the next day the price wont get updated for the whole day to fix this we
+    # need to make sure we check the date only like if date is greater than date then we run the mf update price
 
     yahoo_assets = []
     yahoo_symbols = []
@@ -188,8 +188,8 @@ def update_live_prices(holdings):
 
     # 2. MFAPI.IN (Parallel Threads)
     if mf_assets:
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_asset = {executor.submit(fetch_mf_price, asset): asset for asset in mf_assets}
+        with ThreadPoolExecutor(max_workers=10) as mf_executor:
+            future_to_asset = {mf_executor.submit(fetch_mf_price, asset): asset for asset in mf_assets}
             
             for future in as_completed(future_to_asset):
                 asset, price = future.result()
@@ -228,6 +228,22 @@ def get_portfolio(request):
         # Refresh from DB
         holdings = Holding.objects.filter(user=request.user).select_related('asset')
 
+        # backfill trigger logic for daily update
+        ist = zoneinfo.ZoneInfo('Asia/Kolkata')
+        now_ist = timezone.now().astimezone(ist)
+        # we only update the snapshots when its <4am of the current day !!
+        logical_date = now_ist.date() if now_ist.hour>=4 else(now_ist-timedelta(days=1)).date()
+        # asking analyti
+        last_snapshot_date = get_last_snapshot_date(request.user)
+        needs_update = True
+        if last_snapshot_date and last_snapshot_date>=logical_date:
+            needs_update = False
+        execution_lock_key = f"backfill_exec_lock_{request.user.id}"
+
+        if needs_update and not cache.get(execution_lock_key):
+            cache.set(execution_lock_key,"true", timeout=60)
+            executor.submit(run_backfill_in_background,request.user)
+
     data = []
     total_value = 0
     total_invested = 0
@@ -259,6 +275,7 @@ def get_portfolio(request):
 
     total_profit = total_value - total_invested
     total_profit_pct = (total_profit/total_invested*100) if total_invested > 0 else 0
+
 
     return JsonResponse({
         "holdings": data,
@@ -342,7 +359,7 @@ def get_holding_details(request, asset_id):
             "id": t.id, "type": t.type, "qty": float(t.quantity),
             "price": float(t.price), "date": t.date, "total": float(t.quantity * t.price)
         } for t in transactions]
-        
+
         return JsonResponse({
             "symbol": holding.asset.symbol,
             "name": holding.asset.name,
@@ -391,6 +408,6 @@ def classify_asset_view(request):
         call_command('reclassify_asset')
         return HttpResponse("DB asset classification commpleted")
     except Exception as e:
-        logger.error(f"Error classifying the assets: {str(e)}", status = 500)
+        logger.error(f"Error classifying the assets: {str(e)}")
         
         return HttpResponse(f"Error classifying the assets: {str(e)}", status = 500)

@@ -7,6 +7,15 @@ from django.db import transaction
 from portfolio.models import Transaction
 from analytics.models import PortfolioSnapshot
 from django.db import close_old_connections
+from analytics.models import PortfolioSnapshot
+
+def get_last_snapshot_date(user):
+    """
+    Service interface for other apps to safely check analytics state
+    without directly importing the models.
+    """
+    latest = PortfolioSnapshot.objects.filter(user=user).order_by('-date').first()
+    return latest.date if latest else None
 
 logger = logging.getLogger(__name__)
 
