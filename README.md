@@ -168,7 +168,7 @@ Every architecture decision carries a cost. Here are the conscious tradeoffs mad
 
 * **Core**: Python 3.10+, Django 5.0
 * **Data Science**: Pandas, NumPy (Vectorization)
-* **API**: Django Rest Framework (DRF)
+* **API**: Django custom backend
 * **Frontend**: React + Vite + TailwindCSS
 * **Database**: PostgreSQL (Production), SQLite (Dev)
 * **Concurrency**: `ThreadPoolExecutor`, Django Signals

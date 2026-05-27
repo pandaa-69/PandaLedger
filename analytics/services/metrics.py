@@ -80,7 +80,7 @@ def calculate_portfolio_metrics(user):
     # 3. Calculate Daily Returns
     df['Portfolio_Return'] = df['total_value'].pct_change().dropna()
     
-    # --- CALCULATION 1: VOLATILITY (Risk) ---
+    # VOLATILITY (Risk)
     if len(df) > 1:
         daily_std = df['Portfolio_Return'].std()
         # Annualize: Daily Std Dev * Sqrt(252 trading days)
@@ -92,10 +92,10 @@ def calculate_portfolio_metrics(user):
     if annualized_volatility > 15: volatility_label = "Medium"
     if annualized_volatility > 30: volatility_label = "High"
 
-    # --- CALCULATION 2: BETA (Market Sensitivity) ---
+    # BETA (Market Sensitivity)
     market_returns = fetch_benchmark_data()
     
-    # Align dates (Safe because both are timezone-naive now)
+    # Align dates (Safe because both are timezone naive now)
     aligned_data = pd.concat([df['Portfolio_Return'], market_returns], axis=1).dropna()
     aligned_data.columns = ['Portfolio', 'Market']
     
