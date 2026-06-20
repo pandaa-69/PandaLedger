@@ -229,7 +229,7 @@ def get_market_dashboard_data():
             
             # Set a temporary lock 5 seconds to prevent multiple threads from spawning 
             # if 100 users hit this exact line simultaneously.
-            cache.set("market_update_lock", "true", 5)
+            cache.set("market_update_lock", "true", 15)
             
             thread = threading.Thread(target=fetch_live_data_and_save, daemon=True)
             thread.start()

@@ -106,7 +106,7 @@ def fetch_mf_price(asset):
     """
     try:
         # 5 second timeout to prevent blocking
-        response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}", timeout=3)
+        response = requests.get(f"https://api.mfapi.in/mf/{asset.symbol}", timeout=5)
         if response.status_code == 200:
             data = response.json()
             if data.get('data'):
