@@ -85,7 +85,7 @@ def get_sector_split(user):
         sec = h.asset.sector
 
         # Fallback for assets like Gold/ETFs that might not have a traditional sector
-        if not sec or sec == "Other":
+        if not sec or sec.strip().lower() in ["other", "unknown"]:
             sec = h.asset.asset_type
 
         sector_map[sec] = sector_map.get(sec, 0) + val
