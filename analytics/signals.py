@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 
 def run_backfill_in_background(user):
     """
@@ -51,9 +51,8 @@ def trigger_backfill(sender, instance, **kwargs):
     try:
         user = instance.holding.user
         
-        # Submit to the queue aka ThreadPool
-        # This returns immediately, so the UI is still fast.
-        executor.submit(run_backfill_in_background, user)
+        # Wait for the database commit to finish before queueing the thread
+        transaction.on_commit(lambda: executor.submit(run_backfill_in_background, user))
 
     except Exception as e:
         logger.error(f"Error triggering backfill signal: {e}", exc_info=True)
